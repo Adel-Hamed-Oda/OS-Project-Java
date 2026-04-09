@@ -132,4 +132,53 @@ public class Memory {
         }
         System.out.println("----------------------------\n");
     }
+    // Finds the memory address of a specific variable for a process
+    public int getVariableAddress(String varName, PCB pcb) {
+        // Search only within this process's allocated memory boundaries
+        for (int i = pcb.getLowerBoundary(); i <= pcb.getUpperBoundary(); i++) {
+            if (storage[i].getName().equals("Var_" + varName)) {
+                return i; // Variable found!
+            }
+        }
+        return -1; // Variable not found
+    }
+
+    // Assigns a value to a variable (creating it if it doesn't exist)
+    public void assignVariable(String varName, String value, PCB pcb) {
+        int address = getVariableAddress(varName, pcb);
+
+        if (address != -1) {
+            // Variable exists, just update the value
+            storage[address].setValue(value);
+            System.out.println("Process " + pcb.getProcessID() + " updated variable '" + varName + "' to " + value);
+        } else {
+            // Variable doesn't exist, find an empty variable slot
+            boolean allocated = false;
+            for (int i = pcb.getLowerBoundary(); i <= pcb.getUpperBoundary(); i++) {
+                // We initialized empty variables as "Var_0", "Var_1", etc. with value "null"
+                if (storage[i].getName().startsWith("Var_") && storage[i].getValue().equals("null")) {
+                    storage[i].setName("Var_" + varName);
+                    storage[i].setValue(value);
+                    System.out.println("Process " + pcb.getProcessID() + " created variable '" + varName + "' = " + value);
+                    allocated = true;
+                    break;
+                }
+            }
+            if (!allocated) {
+                System.out.println("Error: Process " + pcb.getProcessID() + " has exceeded its 3 variable limit!");
+            }
+        }
+    }
+    // Clears a process's memory block when it is completely finished
+    public void terminateProcess(PCB pcb) {
+        System.out.println("Terminating Process " + pcb.getProcessID() + " and freeing memory...");
+        
+        for (int i = pcb.getLowerBoundary(); i <= pcb.getUpperBoundary(); i++) {
+            storage[i].clear(); // Resets name and value to "Empty"
+        }
+        
+        // Update the PCB state
+        pcb.setProcessState("Finished");
+        System.out.println("Memory from index " + pcb.getLowerBoundary() + " to " + pcb.getUpperBoundary() + " is now free.");
+    }
 }
