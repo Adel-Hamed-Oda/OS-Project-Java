@@ -1,17 +1,16 @@
 package memory;
 
 import java.io.*;
-import java.util.ArrayList;
 import java.util.List;
 
 public class Memory {
-    private MemoryWord[] storage;
+    private final MemoryWord[] storage;
     private final int MAX_SIZE = 40;
 
     public Memory() {
         storage = new MemoryWord[MAX_SIZE];
         for (int i = 0; i < MAX_SIZE; i++) {
-            storage[i] = new MemoryWord("Empty", "Empty");
+            storage[i] = new MemoryWord();
         }
     }
 
@@ -53,7 +52,7 @@ public class Memory {
         int startIndex = -1;
 
         for (int i = 0; i < MAX_SIZE; i++) {
-            if (storage[i].getName().equals("Empty")) {
+            if (storage[i].name.equals("")) {
                 if (consecutiveFreeSpace == 0) startIndex = i;
                 consecutiveFreeSpace++;
                 if (consecutiveFreeSpace == requiredSpace) return startIndex;
@@ -65,29 +64,29 @@ public class Memory {
     }
 
     public String read(int address, PCB pcb) {
-        if (address >= pcb.getLowerBoundary() && address <= pcb.getUpperBoundary()) {
-            return storage[address].getValue();
+        if (address >= pcb.lowerBoundary && address <= pcb.upperBoundary) {
+            return storage[address].value;
         }
         return "Error: Memory Access Violation!";
     }
 
     public void write(int address, String name, String value, PCB pcb) {
-        if (address >= pcb.getLowerBoundary() && address <= pcb.getUpperBoundary()) {
-            storage[address].setName(name);
-            storage[address].setValue(value);
+        if (address >= pcb.lowerBoundary && address <= pcb.upperBoundary) {
+            storage[address].name = name;
+            storage[address].value = value;
         } else {
-            System.out.println("Error: Memory Access Violation by Process " + pcb.getProcessID());
+            System.out.println("Error: Memory Access Violation by Process " + pcb.processID);
         }
     }
 
     public void swapOut(PCB pcb) {
-        String filename = "Disk_Process_" + pcb.getProcessID() + ".txt";
+        String filename = "Disk_Process_" + pcb.processID + ".txt";
         try (BufferedWriter writer = new BufferedWriter(new FileWriter(filename))) {
-            for (int i = pcb.getLowerBoundary(); i <= pcb.getUpperBoundary(); i++) {
-                writer.write(storage[i].getName() + "," + storage[i].getValue() + "\n");
+            for (int i = pcb.lowerBoundary; i <= pcb.upperBoundary; i++) {
+                writer.write(storage[i].name + "," + storage[i].value + "\n");
                 storage[i].clear(); // Free memory
             }
-            System.out.println("Process " + pcb.getProcessID() + " swapped OUT to disk.");
+            System.out.println("Process " + pcb.processID + " swapped OUT to disk.");
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -107,13 +106,13 @@ public class Memory {
             int currentIndex = startIndex;
             while ((line = reader.readLine()) != null) {
                 String[] parts = line.split(",");
-                storage[currentIndex].setName(parts[0]);
-                storage[currentIndex].setValue(parts[1]);
+                storage[currentIndex].name = parts[0];
+                storage[currentIndex].value = parts[1];
                 currentIndex++;
             }
             
             // Update the PCB boundaries in memory
-            storage[startIndex + 3].setValue(startIndex + "-" + (currentIndex - 1));
+            storage[startIndex + 3].value = startIndex + "-" + (currentIndex - 1);
             System.out.println("Process " + processId + " swapped IN from disk to index " + startIndex);
             
             // Delete the disk file after swapping in
@@ -126,7 +125,7 @@ public class Memory {
     public void printMemory() {
         System.out.println("\n--- Current Memory State ---");
         for (int i = 0; i < MAX_SIZE; i++) {
-            if (!storage[i].getName().equals("Empty")) {
+            if (!storage[i].name.equals("")) {
                 System.out.println("Word " + i + ": " + storage[i].toString());
             }
         }
@@ -135,8 +134,8 @@ public class Memory {
     // Finds the memory address of a specific variable for a process
     public int getVariableAddress(String varName, PCB pcb) {
         // Search only within this process's allocated memory boundaries
-        for (int i = pcb.getLowerBoundary(); i <= pcb.getUpperBoundary(); i++) {
-            if (storage[i].getName().equals("Var_" + varName)) {
+        for (int i = pcb.lowerBoundary; i <= pcb.upperBoundary; i++) {
+            if (storage[i].name.equals("Var_" + varName)) {
                 return i; // Variable found!
             }
         }
@@ -149,36 +148,36 @@ public class Memory {
 
         if (address != -1) {
             // Variable exists, just update the value
-            storage[address].setValue(value);
-            System.out.println("Process " + pcb.getProcessID() + " updated variable '" + varName + "' to " + value);
+            storage[address].value = value;
+            System.out.println("Process " + pcb.processID + " updated variable '" + varName + "' to " + value);
         } else {
             // Variable doesn't exist, find an empty variable slot
             boolean allocated = false;
-            for (int i = pcb.getLowerBoundary(); i <= pcb.getUpperBoundary(); i++) {
+            for (int i = pcb.lowerBoundary; i <= pcb.upperBoundary; i++) {
                 // We initialized empty variables as "Var_0", "Var_1", etc. with value "null"
-                if (storage[i].getName().startsWith("Var_") && storage[i].getValue().equals("null")) {
-                    storage[i].setName("Var_" + varName);
-                    storage[i].setValue(value);
-                    System.out.println("Process " + pcb.getProcessID() + " created variable '" + varName + "' = " + value);
+                if (storage[i].name.startsWith("Var_") && storage[i].value.equals("null")) {
+                    storage[i].name = "Var_" + varName;
+                    storage[i].value = value;
+                    System.out.println("Process " + pcb.processID + " created variable '" + varName + "' = " + value);
                     allocated = true;
                     break;
                 }
             }
             if (!allocated) {
-                System.out.println("Error: Process " + pcb.getProcessID() + " has exceeded its 3 variable limit!");
+                System.out.println("Error: Process " + pcb.processID + " has exceeded its 3 variable limit!");
             }
         }
     }
     // Clears a process's memory block when it is completely finished
     public void terminateProcess(PCB pcb) {
-        System.out.println("Terminating Process " + pcb.getProcessID() + " and freeing memory...");
+        System.out.println("Terminating Process " + pcb.processID + " and freeing memory...");
         
-        for (int i = pcb.getLowerBoundary(); i <= pcb.getUpperBoundary(); i++) {
+        for (int i = pcb.lowerBoundary; i <= pcb.upperBoundary; i++) {
             storage[i].clear(); // Resets name and value to "Empty"
         }
         
         // Update the PCB state
-        pcb.setProcessState("Finished");
-        System.out.println("Memory from index " + pcb.getLowerBoundary() + " to " + pcb.getUpperBoundary() + " is now free.");
+        pcb.processState = PCB.ProcessState.Terminated;
+        System.out.println("Memory from index " + pcb.lowerBoundary + " to " + pcb.upperBoundary + " is now free.");
     }
 }
