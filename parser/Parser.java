@@ -2,7 +2,8 @@ package parser;
 
 import java.util.HashMap;
 import java.util.Map;
-import system.SystemCalls;
+
+import os_system.SystemCalls;
 
 public class Parser {
 

@@ -1,16 +1,15 @@
 import memory.Memory;
 import mutex.MutexManager;
-
-import process.ProcessController;
+import os_process.ProcessController;
 
 public class Main {
 
     // example: file1 loadtime1 file2 loadtime2 file3 loadtime3
     public static void main(String[] args) {
-        Init();
+        Init(args);
     }
 
-    public static void Init() {
+    public static void Init(String[] args) {
         Memory.Init_Memory();
         MutexManager.InitMutexes();
 
@@ -21,7 +20,7 @@ public class Main {
 
         String[] loadTimes = new String[args.length / 2];
         for (int i = 1; i < args.length; i += 2) {
-            loadTimes[(i / 2) + 1] = args[i];
+            loadTimes[i / 2] = args[i];
         }
 
         for (String fileName : fileNames) {

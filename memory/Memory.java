@@ -2,7 +2,8 @@ package memory;
 
 import java.io.*;
 import java.util.List;
-import process.*;
+
+import os_process.*;
 
 public class Memory {
     private static MemoryWord[] storage;

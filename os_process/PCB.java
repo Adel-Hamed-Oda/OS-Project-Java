@@ -1,4 +1,4 @@
-package process;
+package os_process;
 
 public class PCB {
     private static int idCounter = 0;

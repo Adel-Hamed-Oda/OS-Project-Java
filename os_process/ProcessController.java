@@ -1,4 +1,4 @@
-package process;
+package os_process;
 
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;
@@ -29,7 +29,7 @@ public class ProcessController {
                 instructions[instructions.length - 1] = line;
             }
         } catch (IOException e) {
-            e.printStackTrace();
+            System.out.println("Error reading file: " + e.getMessage());
         }
 
         PCB newProcess = new PCB(ProcessState.New, 0, -1, -1);

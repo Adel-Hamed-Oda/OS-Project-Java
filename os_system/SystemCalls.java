@@ -1,4 +1,4 @@
-package system;
+package os_system;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
@@ -11,27 +11,23 @@ import memory.Memory;
 public class SystemCalls {
     public static String readFile(String fileName)  {
         StringBuilder content = new StringBuilder();
-        try {
-            BufferedReader br = new BufferedReader(new FileReader(fileName));
+        try (BufferedReader br = new BufferedReader(new FileReader(fileName))) {
             String line;
             while ((line = br.readLine()) != null) {
                 content.append(line).append("\n");
             }
-            br.close();
         } catch (IOException e) {
-            
+            System.out.println("Error reading file: " + e.getMessage());
         }
+
         return content.toString();
     }
 
     public static void writeFile(String fileName, String data) {
-        try {
-            FileWriter writer = new FileWriter(fileName);
+        try (FileWriter writer = new FileWriter(fileName)) {
             writer.write(data);
-            writer.close();
-        }
-        catch (IOException e) {
-            
+        } catch (IOException e) {
+            System.out.println("Error writing to file: " + e.getMessage());
         }
     }
 
