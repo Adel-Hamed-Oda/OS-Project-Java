@@ -2,6 +2,7 @@ package process;
 
 public class PCB {
     public enum ProcessState {
+        New,
         Ready,
         Running,
         Waiting,

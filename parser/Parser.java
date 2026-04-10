@@ -128,10 +128,6 @@ public class Parser {
         }
     }
 
-    public int getNumberOfLines(String filePath) {
-        return -1;
-    }
-
     public void parse(String input) throws IllegalArgumentException {
         String[] parts = input.trim().split("\\s+", 2);
         String commandName = parts[0].toLowerCase();
