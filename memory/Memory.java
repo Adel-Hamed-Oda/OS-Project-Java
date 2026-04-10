@@ -95,7 +95,7 @@ public class Memory {
             }
             System.out.println("Process " + pcb.processID + " swapped OUT to disk.");
         } catch (IOException e) {
-            e.printStackTrace();
+            System.out.println("Error swapping out process: " + e.getMessage());
         }
     }
 
@@ -125,7 +125,7 @@ public class Memory {
             // Delete the disk file after swapping in
             new File(filename).delete();
         } catch (IOException e) {
-            e.printStackTrace();
+            System.out.println("Error swapping in process: " + e.getMessage());
         }
     }
 

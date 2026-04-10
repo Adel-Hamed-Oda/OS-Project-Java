@@ -36,6 +36,8 @@ public class SystemCalls {
     }
 
     public static String input() {
+        @SuppressWarnings("resource") // I added this because I hate the yellow lines, ignore it
+
         Scanner sc = new Scanner(System.in);
         return sc.nextLine();
     }
