@@ -1,4 +1,5 @@
 import memory.Memory;
+import mutex.MutexManager;
 
 import process.ProcessController;
 
@@ -6,7 +7,12 @@ public class Main {
 
     // example: file1 loadtime1 file2 loadtime2 file3 loadtime3
     public static void main(String[] args) {
+        Init();
+    }
+
+    public static void Init() {
         Memory.Init_Memory();
+        MutexManager.InitMutexes();
 
         String[] fileNames = new String[args.length / 2];
         for (int i = 0; i < args.length; i += 2) {

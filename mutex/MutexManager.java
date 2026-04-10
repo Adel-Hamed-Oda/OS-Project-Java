@@ -1,16 +1,15 @@
 package mutex;
 
-public class Mutex {
-  private int userInput, userOutput ,File ;
-	int[] input,output,file;
-	int inputcounter,outputcounter,filecounter ;
-	public Mutex(){
-		 userOutput  = 1;
-		 userInput = 1 ;
-		 File = 1 ;
-		
+public class MutexManager {
+  	private static int userInput, userOutput, File ;
+	
+	public static void InitMutexes(){
+		userOutput = 1;
+		userInput = 1 ;
+		File = 1 ;
 	}
-	public boolean waitinput(int processid){
+	
+	public static boolean waitinput(int processid){
 		if (userInput == 1){
 			userInput = 0 ;
 			return true ;
@@ -20,7 +19,7 @@ public class Mutex {
 		}
 	}
 
-	public boolean waitoutput(int processid){
+	public static boolean waitoutput(int processid){
 		if (userOutput == 1){
 			userOutput = 0 ;
 			// system call for output device using the processid 
@@ -30,7 +29,7 @@ public class Mutex {
 		}
 	}
 
-	public boolean waitmemory(int processid){
+	public static boolean waitmemory(int processid){
 		if (File == 1){
 			File = 0 ;
 			return true ;
@@ -40,18 +39,15 @@ public class Mutex {
 		}
 	}
 
-	public void signalinput(){
+	public static void signalinput(){
 		userInput += 1 ;
 	
 	}
-	public void signaloutput(){
+	public static void signaloutput(){
 		userOutput += 1 ;
-	
-	}
-	public void signalmemory(){
-		File += 1 ;
-		
 	}
 
-
+	public static void signalmemory(){
+		File += 1 ;	
+	}
 }
