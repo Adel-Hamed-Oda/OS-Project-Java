@@ -32,7 +32,7 @@ public class ProcessController {
             e.printStackTrace();
         }
 
-        PCB newProcess = new PCB(PCB.ProcessState.New, 0, -1, -1);
+        PCB newProcess = new PCB(ProcessState.New, 0, -1, -1);
         processTable.add(newProcess);
         instructionTable.add(instructions);
     }

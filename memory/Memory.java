@@ -188,7 +188,7 @@ public class Memory {
         }
         
         // Update the PCB state
-        pcb.processState = PCB.ProcessState.Terminated;
+        pcb.processState = ProcessState.Terminated;
         System.out.println("Memory from index " + pcb.lowerBoundary + " to " + pcb.upperBoundary + " is now free.");
     }
 }

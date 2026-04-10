@@ -1,14 +1,6 @@
 package process;
 
 public class PCB {
-    public enum ProcessState {
-        New,
-        Ready,
-        Running,
-        Waiting,
-        Terminated
-    }
-
     private static int idCounter = 0;
 
     public int processID;

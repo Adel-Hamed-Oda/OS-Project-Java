@@ -6,7 +6,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.Scanner;
 
-import memory.*;
+import memory.Memory;
 
 public class SystemCalls {
     public static String readFile(String fileName)  {
