@@ -54,7 +54,7 @@ public class Memory {
         int startIndex = -1;
 
         for (int i = 0; i < MAX_SIZE; i++) {
-            if (storage[i].name.equals("")) {
+            if (storage[i].name == null) {
                 if (consecutiveFreeSpace == 0) startIndex = i;
                 consecutiveFreeSpace++;
                 if (consecutiveFreeSpace == requiredSpace) return startIndex;
@@ -132,7 +132,7 @@ public class Memory {
     public static void printMemory() {
         System.out.println("\n--- Current Memory State ---");
         for (int i = 0; i < MAX_SIZE; i++) {
-            if (!storage[i].name.equals("")) {
+            if (storage[i].name != null) {
                 System.out.println("Word " + i + ": " + storage[i].toString());
             }
         }
@@ -144,7 +144,7 @@ public class Memory {
         
         // Search only within this process's allocated memory boundaries
         for (int i = pcb.lowerBoundary; i <= pcb.upperBoundary; i++) {
-            if (storage[i].name.equals(varName)) {
+            if (storage[i].name != null && storage[i].name.equals(varName)) {
                 return i; // Variable found!
             }
         }
@@ -165,7 +165,7 @@ public class Memory {
             // Variable doesn't exist, find an empty variable slot
             boolean allocated = false;
             for (int i = pcb.lowerBoundary; i <= pcb.upperBoundary; i++) {
-                if (storage[i].value.equals("null")) {
+                if (storage[i].value == null) {
                     storage[i].name = varName;
                     storage[i].value = value;
                     System.out.println("Process " + pcb.processID + " created variable '" + varName + "' = " + value);
@@ -185,7 +185,7 @@ public class Memory {
         System.out.println("Terminating Process " + pcb.processID + " and freeing memory...");
         
         for (int i = pcb.lowerBoundary; i <= pcb.upperBoundary; i++) {
-            storage[i].clear(); // Resets name and value to "Empty"
+            storage[i].clear(); // Resets name and value to null
         }
         
         // Update the PCB state

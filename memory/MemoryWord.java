@@ -5,8 +5,8 @@ public class MemoryWord {
     public String value;
 
     public MemoryWord() {
-        this.name = "";
-        this.value = "";
+        this.name = null;
+        this.value = null;
     }
 
     public MemoryWord(String name, String value) {
@@ -16,10 +16,9 @@ public class MemoryWord {
 
     // removed the getters and setters since this is spaghetti code and we access fields directly
 
-    // clear should make it "" not have "Empty" inside, what if we want to use "Empty" as a value?
     public void clear() {
-        this.name = "";
-        this.value = "";
+        this.name = null;
+        this.value = null;
     }
 
     // 7elw 3ashan el testing
