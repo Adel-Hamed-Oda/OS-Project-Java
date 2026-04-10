@@ -38,7 +38,6 @@ public class ProcessController {
     }
     
     public static PCB getProcess(int processID) {
-        // This is a placeholder. You would need to implement a way to retrieve the PCB based on the processID.
         for (PCB pcb : processTable) {
             if (pcb.processID == processID) {
                 return pcb;
