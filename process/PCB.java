@@ -1,4 +1,4 @@
-package memory;
+package process;
 
 public class PCB {
     public enum ProcessState {
@@ -8,16 +8,14 @@ public class PCB {
         Terminated
     }
 
-    private static int idCounter = 0; // Static counter to assign unique IDs
+    private static int idCounter = 0;
 
     public int processID;
-    // since we have java it's better to make it an enum, e7na msh fe C
     public ProcessState processState;
     public int programCounter;
     public int lowerBoundary;
     public int upperBoundary;
 
-    // processID is auto-assigned based on the static counter
     public PCB(ProcessState processState, int programCounter, int lowerBoundary, int upperBoundary) {
         this.processID = idCounter++;
         this.processState = processState;

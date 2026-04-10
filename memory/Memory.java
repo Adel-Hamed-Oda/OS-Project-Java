@@ -2,12 +2,13 @@ package memory;
 
 import java.io.*;
 import java.util.List;
+import process.*;
 
 public class Memory {
-    private final MemoryWord[] storage;
-    private final int MAX_SIZE = 40;
+    private static MemoryWord[] storage;
+    private static final int MAX_SIZE = 40;
 
-    public Memory() {
+    public static void Init_Memory() {
         storage = new MemoryWord[MAX_SIZE];
         for (int i = 0; i < MAX_SIZE; i++) {
             storage[i] = new MemoryWord();
@@ -15,7 +16,7 @@ public class Memory {
     }
 
     // Calculates how much space a process needs (Instructions + 3 Variables)
-    public boolean allocateProcess(int processId, List<String> instructions) {
+    public static boolean allocateProcess(int processId, List<String> instructions) {
         int requiredSpace = instructions.size() + 3 + 4; // 3 variables required by assignment, 4 for PCB
         int startIndex = findFreeSpace(requiredSpace);
 
@@ -47,7 +48,7 @@ public class Memory {
         return true;
     }
 
-    private int findFreeSpace(int requiredSpace) {
+    private static int findFreeSpace(int requiredSpace) {
         int consecutiveFreeSpace = 0;
         int startIndex = -1;
 
@@ -63,14 +64,18 @@ public class Memory {
         return -1; // Not enough contiguous space
     }
 
-    public String read(int address, PCB pcb) {
+    public static String read(int address, int processID) {
+        // This is a simplified version - you would need to retrieve the PCB for the given processID
+        // For now, assuming we have access to the PCB
+        PCB pcb = ProcessController.getProcess(processID);
         if (address >= pcb.lowerBoundary && address <= pcb.upperBoundary) {
             return storage[address].value;
         }
         return "Error: Memory Access Violation!";
     }
 
-    public void write(int address, String name, String value, PCB pcb) {
+    public static void write(int address, String name, String value, int processID) {
+        PCB pcb = ProcessController.getProcess(processID);
         if (address >= pcb.lowerBoundary && address <= pcb.upperBoundary) {
             storage[address].name = name;
             storage[address].value = value;
@@ -79,7 +84,8 @@ public class Memory {
         }
     }
 
-    public void swapOut(PCB pcb) {
+    public static void swapOut(int processId) {
+        PCB pcb = ProcessController.getProcess(processId);
         String filename = "Disk_Process_" + pcb.processID + ".txt";
         try (BufferedWriter writer = new BufferedWriter(new FileWriter(filename))) {
             for (int i = pcb.lowerBoundary; i <= pcb.upperBoundary; i++) {
@@ -92,7 +98,7 @@ public class Memory {
         }
     }
 
-    public void swapIn(int processId, int requiredSpace) {
+    public static void swapIn(int processId, int requiredSpace) {
         String filename = "Disk_Process_" + processId + ".txt";
         int startIndex = findFreeSpace(requiredSpace);
         
@@ -122,7 +128,7 @@ public class Memory {
         }
     }
 
-    public void printMemory() {
+    public static void printMemory() {
         System.out.println("\n--- Current Memory State ---");
         for (int i = 0; i < MAX_SIZE; i++) {
             if (!storage[i].name.equals("")) {
@@ -132,7 +138,9 @@ public class Memory {
         System.out.println("----------------------------\n");
     }
     // Finds the memory address of a specific variable for a process
-    public int getVariableAddress(String varName, PCB pcb) {
+    public static int getVariableAddress(String varName, int processID) {
+        PCB pcb = ProcessController.getProcess(processID);
+        
         // Search only within this process's allocated memory boundaries
         for (int i = pcb.lowerBoundary; i <= pcb.upperBoundary; i++) {
             if (storage[i].name.equals(varName)) {
@@ -143,8 +151,10 @@ public class Memory {
     }
 
     // Assigns a value to a variable (creating it if it doesn't exist)
-    public void assignVariable(String varName, String value, PCB pcb) {
-        int address = getVariableAddress(varName, pcb);
+    public static void assignVariable(String varName, String value, int processID) {
+        PCB pcb = ProcessController.getProcess(processID);
+        
+        int address = getVariableAddress(varName, processID);
 
         if (address != -1) {
             // Variable exists, just update the value
@@ -168,7 +178,9 @@ public class Memory {
         }
     }
     // Clears a process's memory block when it is completely finished
-    public void terminateProcess(PCB pcb) {
+    public static void terminateProcess(int processID) {
+        PCB pcb = ProcessController.getProcess(processID);
+
         System.out.println("Terminating Process " + pcb.processID + " and freeing memory...");
         
         for (int i = pcb.lowerBoundary; i <= pcb.upperBoundary; i++) {
