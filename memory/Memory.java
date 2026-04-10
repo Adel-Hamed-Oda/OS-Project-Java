@@ -14,7 +14,7 @@ public class Memory {
         }
     }
 
-    // Calculates how much space a process needs (Instructions + 3 Variables + 4 PCB Words)
+    // Calculates how much space a process needs (Instructions + 3 Variables)
     public boolean allocateProcess(int processId, List<String> instructions) {
         int requiredSpace = instructions.size() + 3 + 4; // 3 variables required by assignment, 4 for PCB
         int startIndex = findFreeSpace(requiredSpace);
@@ -135,7 +135,7 @@ public class Memory {
     public int getVariableAddress(String varName, PCB pcb) {
         // Search only within this process's allocated memory boundaries
         for (int i = pcb.lowerBoundary; i <= pcb.upperBoundary; i++) {
-            if (storage[i].name.equals("Var_" + varName)) {
+            if (storage[i].name.equals(varName)) {
                 return i; // Variable found!
             }
         }
@@ -154,9 +154,8 @@ public class Memory {
             // Variable doesn't exist, find an empty variable slot
             boolean allocated = false;
             for (int i = pcb.lowerBoundary; i <= pcb.upperBoundary; i++) {
-                // We initialized empty variables as "Var_0", "Var_1", etc. with value "null"
-                if (storage[i].name.startsWith("Var_") && storage[i].value.equals("null")) {
-                    storage[i].name = "Var_" + varName;
+                if (storage[i].value.equals("null")) {
+                    storage[i].name = varName;
                     storage[i].value = value;
                     System.out.println("Process " + pcb.processID + " created variable '" + varName + "' = " + value);
                     allocated = true;
