@@ -4,6 +4,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import os_system.SystemCalls;
+import mutex.MutexManager;
 
 public class Parser {
 
@@ -25,11 +26,46 @@ public class Parser {
         if (args.length < 2) {
             throw new IllegalArgumentException("usage: semWait <mutexName>");
         }
+
+        switch (args[1]) {
+            case "input" -> {
+                if (!MutexManager.waitinput(Scheduler.getCurrentProcessID())) {
+                    Scheduler.blockCurrentProcess(args[1]);
+                }
+            }
+            case "output" -> {
+                if (!MutexManager.waitoutput(Scheduler.getCurrentProcessID())) {
+                    Scheduler.blockCurrentProcess(args[1]);
+                }
+            }
+            case "memory" -> {
+                if (!MutexManager.waitmemory(Scheduler.getCurrentProcessID())) {
+                    Scheduler.blockCurrentProcess(args[1]);
+                }
+            }
+            default -> throw new IllegalArgumentException("Unknown mutex: " + args[1]);
+        }
     }
 
     private void semSignal(String[] args) throws IllegalArgumentException {
         if (args.length < 2) {
             throw new IllegalArgumentException("usage: semSignal <mutexName>");
+        }
+
+        switch (args[1]) {
+            case "input" -> {
+                MutexManager.signalinput(Scheduler.getCurrentProcessID());
+                Scheduler.unblockProcessOnInput();
+            }
+            case "output" -> {
+                MutexManager.signaloutput(Scheduler.getCurrentProcessID());
+                Scheduler.unblockProcessOnOutput();
+            }
+            case "memory" -> {
+                MutexManager.signalmemory(Scheduler.getCurrentProcessID());
+                Scheduler.unblockProcessOnMemory();
+            }
+            default -> throw new IllegalArgumentException("Unknown mutex: " + args[1]);
         }
     }
 
