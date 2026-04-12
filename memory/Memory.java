@@ -181,15 +181,45 @@ public class Memory {
     // Clears a process's memory block when it is completely finished
     public static void terminateProcess(int processID) {
         PCB pcb = ProcessController.getProcess(processID);
+        int lower = pcb.lowerBoundary;
+        int upper = pcb.upperBoundary;
+        int height = upper - lower + 1;
 
-        System.out.println("Terminating Process " + pcb.processID + " and freeing memory...");
-        
-        for (int i = pcb.lowerBoundary; i <= pcb.upperBoundary; i++) {
-            storage[i].clear(); // Resets name and value to null
+        // 1. Clear the terminated process's block
+        for (int i = lower; i <= upper; i++) {
+            storage[i].clear();
         }
-        
-        // Update the PCB state
-        pcb.processState = ProcessState.Terminated;
-        System.out.println("Memory from index " + pcb.lowerBoundary + " to " + pcb.upperBoundary + " is now free.");
+
+        // 2. Shift everything after the freed block left by 'height' positions
+        //    Loop must go all the way to MAX_SIZE - height (not just height words)
+        for (int i = lower; i < MAX_SIZE - height; i++) {
+            storage[i].name  = storage[i + height].name;
+            storage[i].value = storage[i + height].value;
+        }
+
+        // 3. Clear the tail entries that are now stale duplicates
+        for (int i = MAX_SIZE - height; i < MAX_SIZE; i++) {
+            storage[i].clear();
+        }
+
+        // 4. Update PCB boundaries of every process that lived ABOVE the freed block,
+        //    both in the ProcessController's PCB object AND in memory itself
+        for (PCB other : ProcessController.processTable) {
+            if (other.processID == processID) continue;
+
+            if (other.lowerBoundary > upper) {
+                other.lowerBoundary -= height;
+                other.upperBoundary -= height;
+
+                // PCB layout: [0]=PCB_ID, [1]=PCB_State, [2]=PCB_PC, [3]=PCB_Bounds
+                // Update PCB_Bounds in memory
+                storage[other.lowerBoundary + 3].value =
+                    other.lowerBoundary + "-" + other.upperBoundary;
+
+                // Update PCB_PC in memory (it holds an absolute address, so it must shift too)
+                int oldPC = Integer.parseInt(storage[other.lowerBoundary + 2].value);
+                storage[other.lowerBoundary + 2].value = String.valueOf(oldPC - height);
+            }
+        }
     }
 }
