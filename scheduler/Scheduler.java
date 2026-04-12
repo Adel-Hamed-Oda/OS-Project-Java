@@ -1,64 +1,80 @@
 package scheduler;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.Queue;
+import memory.Memory;
 
 public class Scheduler {
 
-    public static Queue<Integer> readyQueue = new LinkedList<Integer>();
-    public static Queue<Integer> waitingQueue = new LinkedList<Integer>();
+    public static Queue<Integer> readyQueue = new LinkedList<Integer>();  // should things from the waitnig queue return to the beginning or the end of the queue?
+    public static Queue<Integer> waitingQueueInput = new LinkedList<Integer>();
+    public static Queue<Integer> waitingQueueOutput = new LinkedList<Integer>();
+    public static Queue<Integer> waitingQueueMemory = new LinkedList<Integer>();
     public static Queue<Integer> jobPool = new LinkedList<Integer>();
 
-    final private static ArrayList<Integer> arrival_times = new ArrayList<Integer>(Arrays.asList(0, 7, 4));
-    final private static ArrayList<Integer> burst_times = new ArrayList<Integer>(Arrays.asList(7, 6, 1));
+    final public static ArrayList<Integer> arrival_times = new ArrayList<>();
+    final public static ArrayList<Integer> burst_times = new ArrayList<>();
 
     public static int getCurrentProcessID() {
         return readyQueue.peek();
     }
 
-    public static void blockCurrentProcess(String str) {
+    public static void blockProcessOnInput() {
         int currentProcessID = readyQueue.poll();
         if (currentProcessID != -1) {
-            waitingQueue.offer(currentProcessID); // multiple waiting queues for each mutex??
+            waitingQueueInput.offer(currentProcessID);
+        }
+    }
+
+    public static void blockProcessOnOutput() {
+        int currentProcessID = readyQueue.poll();
+        if (currentProcessID != -1) {
+            waitingQueueOutput.offer(currentProcessID);
+        }
+    }
+
+    public static void blockProcessOnMemory() {
+        int currentProcessID = readyQueue.poll();
+        if (currentProcessID != -1) {
+            waitingQueueMemory.offer(currentProcessID);
         }
     }
 
     public static void unblockProcessOnInput() {
-        if (!waitingQueue.isEmpty()) {
-            int processID = waitingQueue.poll();
+        if (!waitingQueueInput.isEmpty()) {
+            int processID = waitingQueueInput.poll();
             readyQueue.offer(processID);
         }
     }
 
     public static void unblockProcessOnOutput() {
-        if (!waitingQueue.isEmpty()) {
-            int processID = waitingQueue.poll();
+        if (!waitingQueueOutput.isEmpty()) {
+            int processID = waitingQueueOutput.poll();
             readyQueue.offer(processID);
         }
     }
 
     public static void unblockProcessOnMemory() {
-        if (!waitingQueue.isEmpty()) {
-            int processID = waitingQueue.poll();
+        if (!waitingQueueMemory.isEmpty()) {
+            int processID = waitingQueueMemory.poll();
             readyQueue.offer(processID);
         }
     }
 
-    public static ArrayList<Process> convertReadyQueueToProcesses() {
-        ArrayList<Process> processes = new ArrayList<Process>();
+    public static ArrayList<OS_Process> convertReadyQueueToProcesses() {
+        ArrayList<OS_Process> processes = new ArrayList<OS_Process>();
         ArrayList<Integer> readyQueueArr = new ArrayList<>(readyQueue);
         for (int i = 0; i < readyQueueArr.size(); i++) {
             int p_id = readyQueueArr.get(i);
             int arrival_time = arrival_times.get(i);
             int burst_time = burst_times.get(i);
-            processes.add(new Process(p_id, arrival_time, burst_time));
+            processes.add(new OS_Process(p_id, arrival_time, burst_time));
         }
         return processes;
     }
 
-    public static int get_HRRN(ArrayList<Process> processes, int current_time) {
+    public static int get_HRRN(ArrayList<OS_Process> processes, int current_time) {
         int n = processes.size();
         int max_index = -1;
         double max_response_ratio = -1;
@@ -76,29 +92,31 @@ public class Scheduler {
         return max_index;
     }
 
-    public static void simulate_HRRN(ArrayList<Process> processes) {
+    public static void simulate_HRRN(ArrayList<OS_Process> processes) {
         int current_time = 0;
 
         while (!processes.isEmpty()) {
             int index = get_HRRN(processes, current_time);
             if (index != -1) {
-                Process process = processes.get(index);
+                OS_Process process = processes.get(index);
                 for (int i = 0; i < process.getBurst_time(); i++) {
-                    System.out.println("Process " + process.getP_id() + " is running at time " + current_time);
+                    //System.out.println("Process " + process.getP_id() + " is running at time " + current_time);
+
+                    Memory.printMemory();
+
                     current_time++;
                 }
                 process.set_Executed_time(process.getBurst_time());
                 processes.remove(index);
-                System.out.println("Process " + process.getP_id() + " completed at time " + current_time);
-                System.out.println("--------------------------------------------------");
+                //System.out.println("Process " + process.getP_id() + " completed at time " + current_time);
             } else {
                 current_time++;
             }
         }
     }
 
-    public static boolean isProcessInRRQueue(int processID, Queue<Process> RRQueue) {
-        for (Process process : RRQueue) {
+    public static boolean isProcessInRRQueue(int processID, Queue<OS_Process> RRQueue) {
+        for (OS_Process process : RRQueue) {
             if (process.getP_id() == processID) {
                 return true;
             }
@@ -106,10 +124,10 @@ public class Scheduler {
         return false;
     }
 
-    public static void simulate_RR(ArrayList<Process> processes, int time_quantum) {
+    public static void simulate_RR(ArrayList<OS_Process> processes, int time_quantum) {
         processes.sort((p1, p2) -> Integer.compare(p1.getArrival_time(), p2.getArrival_time()));
         int current_time = 0;
-        Queue<Process> RRQueue = new LinkedList<>();
+        Queue<OS_Process> RRQueue = new LinkedList<>();
 
         while(!processes.isEmpty() || !RRQueue.isEmpty()) {
             if(RRQueue.isEmpty()) {
@@ -120,7 +138,7 @@ public class Scheduler {
                     processes.remove(0);
                 }
             }
-            Process current_process = RRQueue.poll();
+            OS_Process current_process = RRQueue.poll();
             int execution_time = Math.min(time_quantum, current_process.getBurst_time() - current_process.getExecuted_time());
             for (int i = 0; i < execution_time; i++) {
                 System.out.println("Process " + current_process.getP_id() + " is running at time " + current_time);
@@ -146,7 +164,7 @@ public class Scheduler {
         readyQueue.offer(2);
         readyQueue.offer(3);
 
-        ArrayList<Process> processes = convertReadyQueueToProcesses();
+        ArrayList<OS_Process> processes = convertReadyQueueToProcesses();
 
         simulate_RR(processes, 2);
 

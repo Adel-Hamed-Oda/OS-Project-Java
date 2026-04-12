@@ -1,12 +1,12 @@
 package scheduler;
 
-public class Process {
+public class OS_Process {
     private int p_id;
     private int arrival_time;
     private int burst_time;
     private int executed_time;
 
-    public Process(int p_id, int arrival_time, int burst_time) {
+    public OS_Process(int p_id, int arrival_time, int burst_time) {
         this.p_id = p_id;
         this.arrival_time = arrival_time;
         this.burst_time = burst_time;

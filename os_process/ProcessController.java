@@ -25,6 +25,10 @@ public class ProcessController {
         try (BufferedReader br = new BufferedReader(reader)) {
             String line;
             while ((line = br.readLine()) != null) {
+                if (line.trim().isEmpty()) {
+                    continue;
+                }
+
                 instructions = java.util.Arrays.copyOf(instructions, instructions.length + 1);
                 instructions[instructions.length - 1] = line;
             }
