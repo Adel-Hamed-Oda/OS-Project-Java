@@ -5,6 +5,7 @@ import java.util.Map;
 
 import os_system.SystemCalls;
 import mutex.MutexManager;
+import scheduler.Scheduler;
 
 public class Parser {
 
