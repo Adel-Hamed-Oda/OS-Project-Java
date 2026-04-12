@@ -1,6 +1,7 @@
 package scheduler;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.Queue;
 import memory.Memory;
@@ -15,9 +16,14 @@ public class Scheduler {
 
     final public static ArrayList<Integer> arrival_times = new ArrayList<>();
     final public static ArrayList<Integer> burst_times = new ArrayList<>();
+    public static int current_time = 0;
+    public static OS_Process current_process;
 
     public static int getCurrentProcessID() {
-        return readyQueue.peek();
+        if (current_process == null) {
+            return -1;
+        }
+        return current_process.getP_id();
     }
 
     public static void blockProcessOnInput() {
@@ -62,11 +68,11 @@ public class Scheduler {
         }
     }
 
-    public static ArrayList<OS_Process> convertReadyQueueToProcesses() {
+    public static ArrayList<OS_Process> convertjobPoolToProcesses() {
         ArrayList<OS_Process> processes = new ArrayList<OS_Process>();
-        ArrayList<Integer> readyQueueArr = new ArrayList<>(readyQueue);
-        for (int i = 0; i < readyQueueArr.size(); i++) {
-            int p_id = readyQueueArr.get(i);
+        ArrayList<Integer> jobPoolArr = new ArrayList<>(jobPool);
+        for (int i = 0; i < jobPoolArr.size(); i++) {
+            int p_id = jobPoolArr.get(i);
             int arrival_time = arrival_times.get(i);
             int burst_time = burst_times.get(i);
             processes.add(new OS_Process(p_id, arrival_time, burst_time));
@@ -74,7 +80,7 @@ public class Scheduler {
         return processes;
     }
 
-    public static int get_HRRN(ArrayList<OS_Process> processes, int current_time) {
+    public static int get_HRRN(ArrayList<OS_Process> processes) {
         int n = processes.size();
         int max_index = -1;
         double max_response_ratio = -1;
@@ -92,53 +98,71 @@ public class Scheduler {
         return max_index;
     }
 
+    //For testing purposes
+    public static void printReadyQueue() {
+        System.out.print("Ready Queue: ");
+        for (Integer processID : readyQueue) {
+            System.out.print(processID + " ");
+        }
+        System.out.println();
+        System.out.println("----End of Ready Queue----");
+    }
+
+    public static void updateReadyQueue(ArrayList<OS_Process> processes) {
+        for (OS_Process process : processes) {
+            if (process.getArrival_time() <= current_time && !process.is_in_ready_queue() && process!= current_process) {
+                readyQueue.offer(process.getP_id());
+                process.set_in_ready_queue(true);
+            }
+        }
+    }
+
     public static void simulate_HRRN(ArrayList<OS_Process> processes) {
-        int current_time = 0;
+        processes.sort((p1, p2) -> Integer.compare(p1.getArrival_time(), p2.getArrival_time()));
+        current_time = 0;
+
 
         while (!processes.isEmpty()) {
-            int index = get_HRRN(processes, current_time);
+            updateReadyQueue(processes);
+            int index = get_HRRN(processes);
             if (index != -1) {
-                OS_Process process = processes.get(index);
-                for (int i = 0; i < process.getBurst_time(); i++) {
-                    //System.out.println("Process " + process.getP_id() + " is running at time " + current_time);
-
-                    Memory.printMemory();
+                current_process = processes.get(index);
+                updateReadyQueue(processes);
+                for (int i = 0; i < current_process.getBurst_time(); i++) {
+                    System.out.println("Process " + current_process.getP_id() + " is running at time " + current_time);
+                    // Memory.printMemory();
 
                     current_time++;
                 }
-                process.set_Executed_time(process.getBurst_time());
+                current_process.set_Executed_time(current_process.getBurst_time());
+                readyQueue.remove(current_process.getP_id());
                 processes.remove(index);
-                //System.out.println("Process " + process.getP_id() + " completed at time " + current_time);
+                System.out.println("Process " + current_process.getP_id() + " completed at time " + current_time);
+                current_process = null;
             } else {
                 current_time++;
             }
         }
     }
-
-    public static boolean isProcessInRRQueue(int processID, Queue<OS_Process> RRQueue) {
-        for (OS_Process process : RRQueue) {
-            if (process.getP_id() == processID) {
-                return true;
-            }
-        }
-        return false;
-    }
-
+    
     public static void simulate_RR(ArrayList<OS_Process> processes, int time_quantum) {
         processes.sort((p1, p2) -> Integer.compare(p1.getArrival_time(), p2.getArrival_time()));
-        int current_time = 0;
+        current_time = 0;
         Queue<OS_Process> RRQueue = new LinkedList<>();
 
         while(!processes.isEmpty() || !RRQueue.isEmpty()) {
             if(RRQueue.isEmpty()) {
                 if(processes.get(0).getArrival_time() > current_time) {
                     current_time++;
+                    continue;
                 } else {
                     RRQueue.offer(processes.get(0));
+                    readyQueue.offer(processes.get(0).getP_id());
                     processes.remove(0);
                 }
             }
-            OS_Process current_process = RRQueue.poll();
+            current_process = RRQueue.poll();
+            readyQueue.remove(current_process.getP_id());
             int execution_time = Math.min(time_quantum, current_process.getBurst_time() - current_process.getExecuted_time());
             for (int i = 0; i < execution_time; i++) {
                 System.out.println("Process " + current_process.getP_id() + " is running at time " + current_time);
@@ -146,28 +170,35 @@ public class Scheduler {
                 current_process.set_Executed_time(current_process.getExecuted_time() + 1);
                 if(processes.size() > 0 && processes.get(0).getArrival_time() <= current_time) {
                     RRQueue.offer(processes.get(0));
+                    readyQueue.offer(processes.get(0).getP_id());
                     processes.remove(0);
                 }
             }
             if(current_process.getExecuted_time() < current_process.getBurst_time()) {
                 RRQueue.offer(current_process);
+                readyQueue.offer(current_process.getP_id());
             } else {
                 System.out.println("Process " + current_process.getP_id() + " completed at time " + current_time);
             }
+            current_process = null;
         }
             
     }
 
     public static void main(String[] args) {
 
-        readyQueue.offer(1); 
-        readyQueue.offer(2);
-        readyQueue.offer(3);
+        // readyQueue.offer(1); 
+        // readyQueue.offer(2);
+        // readyQueue.offer(3);
 
-        ArrayList<OS_Process> processes = convertReadyQueueToProcesses();
+        jobPool.offer(0);
+        jobPool.offer(1);      
+        jobPool.offer(2);
 
-        simulate_RR(processes, 2);
+        ArrayList<OS_Process> processes = convertjobPoolToProcesses();
 
-        // simulate_HRRN(processes);
+        // simulate_RR(processes, 2);
+
+        simulate_HRRN(processes);
     }
 }
