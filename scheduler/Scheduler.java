@@ -14,8 +14,8 @@ public class Scheduler {
     public static Queue<Integer> waitingQueueMemory = new LinkedList<Integer>();
     public static Queue<Integer> jobPool = new LinkedList<Integer>();
 
-    final public static ArrayList<Integer> arrival_times = new ArrayList<>(Arrays.asList(0,8,4));
-    final public static ArrayList<Integer> burst_times = new ArrayList<>(Arrays.asList(6,7,1));
+    final public static ArrayList<Integer> arrival_times = new ArrayList<>();
+    final public static ArrayList<Integer> burst_times = new ArrayList<>();
     public static int current_time = 0;
     public static OS_Process current_process;
 
