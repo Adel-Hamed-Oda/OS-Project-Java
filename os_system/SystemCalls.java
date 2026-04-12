@@ -12,6 +12,7 @@ import scheduler.Scheduler;
 public class SystemCalls {
     public static String readFile(String fileName)  {
         StringBuilder content = new StringBuilder();
+        
         try (BufferedReader br = new BufferedReader(new FileReader(fileName))) {
             String line;
             while ((line = br.readLine()) != null) {
@@ -44,10 +45,25 @@ public class SystemCalls {
     }
 
     public static String readFromMemory(String var) {
-        return Memory.readVariable(var, Scheduler.getCurrentProcessID());
+        return Memory.read(Memory.getVariableAddress(var, Scheduler.getCurrentProcessID()), Scheduler.getCurrentProcessID());
     }
 
     public static void writeToMemory(String var, String value) {
         Memory.assignVariable(var, value, Scheduler.getCurrentProcessID());
+    }
+
+    public static void printToFrom(String var1, String var2) {
+        int pid = Scheduler.getCurrentProcessID();
+        
+        String value1 = Memory.read(Memory.getVariableAddress(var1, pid), pid);
+        String value2 = Memory.read(Memory.getVariableAddress(var2, pid), pid);
+        
+        int num1 = Integer.parseInt(value1);
+        int num2 = Integer.parseInt(value2);
+
+        for (int i = num1; i <= num2; i++) {
+            System.out.print(i + " ");
+        }
+        System.out.println();
     }
 }
