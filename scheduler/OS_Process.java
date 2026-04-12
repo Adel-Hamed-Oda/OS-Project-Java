@@ -5,12 +5,14 @@ public class OS_Process {
     private int arrival_time;
     private int burst_time;
     private int executed_time;
+    private boolean is_in_ready_queue;
 
     public OS_Process(int p_id, int arrival_time, int burst_time) {
         this.p_id = p_id;
         this.arrival_time = arrival_time;
         this.burst_time = burst_time;
         this.executed_time = 0;
+        this.is_in_ready_queue = false;
     }
 
     public int getP_id() {
@@ -31,6 +33,14 @@ public class OS_Process {
 
     public void set_Executed_time(int executed_time) {
         this.executed_time = executed_time;
+    }
+
+    public boolean is_in_ready_queue() {
+        return is_in_ready_queue;
+    }
+
+    public void set_in_ready_queue(boolean in_ready_queue) {
+        this.is_in_ready_queue = in_ready_queue;
     }
 
 }

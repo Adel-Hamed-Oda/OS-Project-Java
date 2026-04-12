@@ -10,7 +10,7 @@ public class Main {
     public static void main(String[] args) {
         Init(args);
 
-        ArrayList<OS_Process> processes = Scheduler.convertReadyQueueToProcesses();
+        ArrayList<OS_Process> processes = Scheduler.convertjobPoolToProcesses();
 
         Scheduler.simulate_RR(processes, 2);
     }
@@ -31,7 +31,7 @@ public class Main {
         for (String fileName : fileNames) {
             ProcessController.AddNewProcess(fileName);
             Scheduler.burst_times.add(ProcessController.getInstructionCount(ProcessController.processTable.size() - 1));
-            Scheduler.readyQueue.offer(ProcessController.processTable.size() - 1);
+            Scheduler.jobPool.offer(ProcessController.processTable.size() - 1);
         }
     }
 }
