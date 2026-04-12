@@ -46,7 +46,6 @@ public class MutexManager {
 	public static void signaloutput(){
 		userOutput += 1 ;
 	}
-
 	public static void signalmemory(){
 		File += 1 ;	
 	}
