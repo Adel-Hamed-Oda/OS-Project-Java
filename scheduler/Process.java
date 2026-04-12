@@ -29,7 +29,7 @@ public class Process {
         return executed_time;
     }
 
-    public void increment_Executed_time(int executed_time) {
+    public void set_Executed_time(int executed_time) {
         this.executed_time = executed_time;
     }
 

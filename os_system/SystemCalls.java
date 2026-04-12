@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.util.Scanner;
 
 import memory.Memory;
+import scheduler.Scheduler;
 
 public class SystemCalls {
     public static String readFile(String fileName)  {
