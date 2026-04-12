@@ -109,7 +109,7 @@ public class Scheduler {
     public static void simulate_RR(ArrayList<Process> processes, int time_quantum) {
         processes.sort((p1, p2) -> Integer.compare(p1.getArrival_time(), p2.getArrival_time()));
         int current_time = 0;
-        Queue<Process> RRQueue = new LinkedList<>(processes);
+        Queue<Process> RRQueue = new LinkedList<>();
 
         while(!processes.isEmpty() || !RRQueue.isEmpty()) {
             if(RRQueue.isEmpty()) {
@@ -142,12 +142,14 @@ public class Scheduler {
 
     public static void main(String[] args) {
 
-        readyQueue.offer(1); // ← offer() instead of enqueue()
+        readyQueue.offer(1); 
         readyQueue.offer(2);
         readyQueue.offer(3);
 
         ArrayList<Process> processes = convertReadyQueueToProcesses();
 
         simulate_RR(processes, 2);
+
+        // simulate_HRRN(processes);
     }
 }
