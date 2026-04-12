@@ -20,6 +20,7 @@ public class Parser {
         commandMap.put("print", this::print);
         commandMap.put("assign", this::assign);
         commandMap.put("writeFile", this::writeFile);
+        commandMap.put("printToFrom", this::printToFrom);
     }
 
     private void semWait(String[] args) throws IllegalArgumentException {
@@ -168,6 +169,14 @@ public class Parser {
             SystemCalls.writeFile(args[1], value);
 
         }
+    }
+
+    private void printToFrom(String[] args) throws IllegalArgumentException {
+        if (args.length < 3) {
+            throw new IllegalArgumentException("usage: printToFrom <variable1> <variable2>");
+        }
+
+        SystemCalls.printToFrom(args[1], args[2]);
     }
 
     public void parse(String input) throws IllegalArgumentException {
