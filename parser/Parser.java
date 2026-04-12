@@ -2,9 +2,9 @@ package parser;
 
 import java.util.HashMap;
 import java.util.Map;
-
-import os_system.SystemCalls;
 import mutex.MutexManager;
+import os_system.SystemCalls;
+import scheduler.Scheduler;
 
 public class Parser {
 
@@ -30,17 +30,17 @@ public class Parser {
         switch (args[1]) {
             case "input" -> {
                 if (!MutexManager.waitinput(Scheduler.getCurrentProcessID())) {
-                    Scheduler.blockCurrentProcess(args[1]);
+                    Scheduler.blockProcessOnInput();
                 }
             }
             case "output" -> {
                 if (!MutexManager.waitoutput(Scheduler.getCurrentProcessID())) {
-                    Scheduler.blockCurrentProcess(args[1]);
+                    Scheduler.blockProcessOnOutput();
                 }
             }
             case "memory" -> {
                 if (!MutexManager.waitmemory(Scheduler.getCurrentProcessID())) {
-                    Scheduler.blockCurrentProcess(args[1]);
+                    Scheduler.blockProcessOnMemory();
                 }
             }
             default -> throw new IllegalArgumentException("Unknown mutex: " + args[1]);
@@ -52,17 +52,22 @@ public class Parser {
             throw new IllegalArgumentException("usage: semSignal <mutexName>");
         }
 
+        // NOTE: I just realized this logic is very risky as this is technically just a semaphore and not a mutex
+        // this is because the process is blocked, but we don't know what blocked it, so it can by change by unblocked
+        // by an outside process, think semWait Input followed by semSignal Output. This doesn't happen in the given examples
+        // but I think we should see what we can do about it
+
         switch (args[1]) {
             case "input" -> {
-                MutexManager.signalinput(Scheduler.getCurrentProcessID());
+                MutexManager.signalinput();
                 Scheduler.unblockProcessOnInput();
             }
             case "output" -> {
-                MutexManager.signaloutput(Scheduler.getCurrentProcessID());
+                MutexManager.signaloutput();
                 Scheduler.unblockProcessOnOutput();
             }
             case "memory" -> {
-                MutexManager.signalmemory(Scheduler.getCurrentProcessID());
+                MutexManager.signalmemory();
                 Scheduler.unblockProcessOnMemory();
             }
             default -> throw new IllegalArgumentException("Unknown mutex: " + args[1]);

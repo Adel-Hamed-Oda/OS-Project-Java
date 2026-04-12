@@ -5,7 +5,7 @@ import java.util.Arrays;
 import java.util.LinkedList;  // ← added
 import java.util.Queue;
 
-public class App {
+public class Scheduler {
 
     public static Queue<Integer> readyQueue = new LinkedList<Integer>();
     public static Queue<Integer> waitingQueue = new LinkedList<Integer>();
@@ -66,9 +66,32 @@ public class App {
         }
     }
 
+    public static int getCurrentProcessID() {
+        // get the id of the current process
+    }
+    public static void blockProcessOnInput() {
+        // put in input blocked queue
+    }
+    public static void blockProcessOnOutput() {
+        // put in output blocked queue
+    }
+    public static void blockProcessOnMemory() {
+        // put in memory blocked queue
+    }
+    public static void unblockProcessOnInput() {
+        // move from input blocked queue to ready queue
+    }
+    public static void unblockProcessOnOutput() {
+        // move from output blocked queue to ready queue
+    }
+    public static void unblockProcessOnMemory() {
+        // move from memory blocked queue to ready queue
+    }
+
+
     public static void main(String[] args) {
 
-        readyQueue.offer(1); // ← offer() instead of enqueue()
+        readyQueue.offer(1);
         readyQueue.offer(2);
         readyQueue.offer(3);
 
