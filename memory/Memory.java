@@ -222,4 +222,65 @@ public class Memory {
             }
         }
     }
+    	 public static void getinotmemory(int processID){
+	      PCB pcb = ProcessController.getProcess(processID);
+	      int position = 0 ;
+	      int countmemory = 0;
+	      int lowestpriorety = Integer.valueOf(storage[0].value);
+	      int max = 0;
+            if(lowestpriorety == null){
+             swapIn( processID, 1);
+                return ;
+            }
+          
+
+	      boolean nospace = true ;
+	       for(int i = 0; i < 40 ; i++){
+	          if (storage[i].name = "PCB_ID" && storage[i].value = String.valueOf(processId)){
+	        	  return ;
+	          }
+	          
+	       }
+	       for(int i = 0 ; i < 40 ; i++){
+    		   if(storage[i].name == null){
+    			   break ;
+    		   }
+    		   countmemory++;
+    	   }
+    	   if((40 - countmemory) > (pcb.upperBoundary - pcb.lowerBoundary)){
+    		   nospace = false ;
+    	   }
+	       
+	       if(nospace){
+	    	   while(nospace == true ){
+	    	   for(int i = 0 ; i < 40 ; i++){
+	    		   if(storage[i].name = "PCB_ID"){
+	    			   for (int element : readyqueue) {
+	    			        if (element.equals(Integer.valueOf(storage[i].value))) {
+	    			             break ; 
+	    			        }
+	    			        position++;
+	    			    }
+	    			   if(position > max){
+	    				   max = position ;
+                           lowestpriorety = Integer.valueOf(storage[i].value) ;
+	    			   }
+	    		   }
+	    	   }
+	    	   swapOut(lowestpriorety);
+	    	   for(int i = 0 ; i < 40 ; i++){
+	    		   if(storage[i].name == null){
+	    			   break ;
+	    		   }
+	    		   countmemory++
+	    	   }
+	    	   if((40 - countmemory) > (pcb.upperBoundary - pcb.lowerBoundary)){
+	    		   nospace = false ;
+	    	   }
+	    	   }
+	    	   
+	       }
+	       swapIn( processID, 1);
+	    
+	    } 
 }
