@@ -24,7 +24,7 @@ public class Memory {
 
         if (startIndex == -1) {
             System.out.println("Not enough memory for Process " + processId + ". Swapping required.");
-            // Here you would trigger swapOut() for an old process, then call allocateProcess again.
+            getIntoMemory(processId, new java.util.LinkedList<>(scheduler.Scheduler.readyQueue)); // Here you would trigger swapOut() for an old process, then call allocateProcess again.
             return false; 
         }
 
@@ -53,7 +53,7 @@ public class Memory {
             pcb.upperBoundary = startIndex + requiredSpace - 1;
             pcb.programCounter = startIndex + 4;
         }
-        
+
         System.out.println("Process " + processId + " allocated from index " + startIndex + " to " + (startIndex + requiredSpace - 1));
         return true;
     }
