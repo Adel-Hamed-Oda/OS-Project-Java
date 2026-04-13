@@ -1,29 +1,38 @@
 package memory;
 
 public class MemoryWord {
+    
+    public enum WordType {
+        Free,
+        PCB,
+        Variable,
+        Instruction
+    }
+
     public String name;
     public String value;
+    public WordType type; // New type field
 
     public MemoryWord() {
         this.name = null;
         this.value = null;
+        this.type = WordType.Free; // Default to free
     }
 
-    public MemoryWord(String name, String value) {
+    public MemoryWord(String name, String value, WordType type) {
         this.name = name;
         this.value = value;
+        this.type = type;
     }
-
-    // removed the getters and setters since this is spaghetti code and we access fields directly
 
     public void clear() {
         this.name = null;
         this.value = null;
+        this.type = WordType.Free;
     }
 
-    // 7elw 3ashan el testing
     @Override
     public String toString() {
-        return "[" + name + " : " + value + "]";
+        return "[" + type + " | " + name + " : " + value + "]";
     }
 }
