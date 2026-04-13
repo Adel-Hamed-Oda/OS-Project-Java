@@ -265,9 +265,11 @@ public class Memory {
 	    				   max = position ;
                            lowestpriorety = Integer.valueOf(storage[i].value) ;
 	    			   }
+					   position = 0 ;
 	    		   }
 	    	   }
 	    	   swapOut(lowestpriorety);
+				   countmemory = 0 ;
 	    	   for(int i = 0 ; i < 40 ; i++){
 	    		   if(storage[i].name == null){
 	    			   break ;
@@ -277,6 +279,7 @@ public class Memory {
 	    	   if((40 - countmemory) > (pcb.upperBoundary - pcb.lowerBoundary)){
 	    		   nospace = false ;
 	    	   }
+				   
 	    	   }
 	    	   
 	       }
