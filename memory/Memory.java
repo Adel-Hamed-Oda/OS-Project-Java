@@ -30,22 +30,30 @@ public class Memory {
 
         int currentIndex = startIndex;
 
-        // 1. Store PCB (ID, State, PC, Boundaries)
-        storage[currentIndex++] = new MemoryWord("PCB_ID", String.valueOf(processId));
-        storage[currentIndex++] = new MemoryWord("PCB_State", "Ready");
-        storage[currentIndex++] = new MemoryWord("PCB_PC", String.valueOf(currentIndex + 2)); // PC points to first instruction
-        storage[currentIndex++] = new MemoryWord("PCB_Bounds", startIndex + "-" + (startIndex + requiredSpace - 1));
+        // 1. Store PCB info (Type: PCB)
+        storage[currentIndex++] = new MemoryWord("PCB_ID", String.valueOf(processId), MemoryWord.WordType.PCB);
+        storage[currentIndex++] = new MemoryWord("PCB_State", "Ready", MemoryWord.WordType.PCB);
+        storage[currentIndex++] = new MemoryWord("PCB_PC", String.valueOf(currentIndex + 2), MemoryWord.WordType.PCB); 
+        storage[currentIndex++] = new MemoryWord("PCB_Bounds", startIndex + "-" + (startIndex + requiredSpace - 1), MemoryWord.WordType.PCB);
 
-        // 2. Store Instructions
+        // 2. Store Instructions (Type: Instruction)
         for (int i = 0; i < instructions.size(); i++) {
-            storage[currentIndex++] = new MemoryWord("Instruction_" + i, instructions.get(i));
+            storage[currentIndex++] = new MemoryWord("Instruction_" + i, instructions.get(i), MemoryWord.WordType.Instruction);
         }
 
-        // 3. Reserve 3 Variable Spaces
+        // 3. Reserve 3 Variable Spaces (Type: Variable)
+        // No more "Var_" prefix needed!
         for (int i = 0; i < 3; i++) {
-            storage[currentIndex++] = new MemoryWord("Var_" + i, "null");
+            storage[currentIndex++] = new MemoryWord("null", "null", MemoryWord.WordType.Variable); 
         }
 
+        PCB pcb = ProcessController.getProcess(processId);
+        if (pcb != null) {
+            pcb.lowerBoundary = startIndex;
+            pcb.upperBoundary = startIndex + requiredSpace - 1;
+            pcb.programCounter = startIndex + 4;
+        }
+        
         System.out.println("Process " + processId + " allocated from index " + startIndex + " to " + (startIndex + requiredSpace - 1));
         return true;
     }
@@ -164,40 +172,34 @@ public class Memory {
     // Finds the memory address of a specific variable for a process
     public static int getVariableAddress(String varName, int processID) {
         PCB pcb = ProcessController.getProcess(processID);
-        
-        // Search only within this process's allocated memory boundaries
         for (int i = pcb.lowerBoundary; i <= pcb.upperBoundary; i++) {
-            if (storage[i].name != null && storage[i].name.equals(varName)) {
-                return i; // Variable found!
+            // Check if it is a Variable type AND matches the name
+            if (storage[i].type == MemoryWord.WordType.Variable && storage[i].name.equals(varName)) {
+                return i; 
             }
         }
-        return -1; // Variable not found
+        return -1; 
     }
 
-    // Assigns a value to a variable (creating it if it doesn't exist)
-    public static void assignVariable(String varName, String value, int processID) {
+   public static void assignVariable(String varName, String value, int processID) {
         PCB pcb = ProcessController.getProcess(processID);
-        
         int address = getVariableAddress(varName, processID);
 
         if (address != -1) {
-            // Variable exists, just update the value
-            storage[address].value = value;
-            System.out.println("Process " + pcb.processID + " updated variable '" + varName + "' to " + value);
+            storage[address].value = value; // Update existing
         } else {
-            // Variable doesn't exist, find an empty variable slot
             boolean allocated = false;
             for (int i = pcb.lowerBoundary; i <= pcb.upperBoundary; i++) {
-                if (storage[i].value == null) {
-                    storage[i].name = varName;
+                // Find an unused variable slot (name is still "null")
+                if (storage[i].type == MemoryWord.WordType.Variable && storage[i].name.equals("null")) {
+                    storage[i].name = varName; // Give it the real name
                     storage[i].value = value;
-                    System.out.println("Process " + pcb.processID + " created variable '" + varName + "' = " + value);
                     allocated = true;
                     break;
                 }
             }
             if (!allocated) {
-                System.out.println("Error: Process " + pcb.processID + " has exceeded its 3 variable limit!");
+                System.out.println("Error: Process " + pcb.processID + " exceeded 3 variable limit!");
             }
         }
     }
