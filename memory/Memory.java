@@ -63,15 +63,16 @@ public class Memory {
         int startIndex = -1;
 
         for (int i = 0; i < MAX_SIZE; i++) {
-            if (storage[i].name == null) {
+            // Using the new Enum to check if it's free
+            if (storage[i].type == MemoryWord.WordType.Free) {
                 if (consecutiveFreeSpace == 0) startIndex = i;
                 consecutiveFreeSpace++;
                 if (consecutiveFreeSpace == requiredSpace) return startIndex;
             } else {
-                consecutiveFreeSpace = 0; // Reset if block is not contiguous
+                consecutiveFreeSpace = 0; 
             }
         }
-        return -1; // Not enough contiguous space
+        return -1; 
     }
 
     public static String read(int address, int processID) {
@@ -204,48 +205,42 @@ public class Memory {
         }
     }
     // Clears a process's memory block when it is completely finished
-    public static void terminateProcess(int processID) {
+   public static void terminateProcess(int processID) {
         PCB pcb = ProcessController.getProcess(processID);
+        if (pcb.lowerBoundary == -1) return; 
+
         int lower = pcb.lowerBoundary;
         int upper = pcb.upperBoundary;
         int height = upper - lower + 1;
 
-        // 1. Clear the terminated process's block
         for (int i = lower; i <= upper; i++) {
             storage[i].clear();
         }
 
-        // 2. Shift everything after the freed block left by 'height' positions
-        //    Loop must go all the way to MAX_SIZE - height (not just height words)
         for (int i = lower; i < MAX_SIZE - height; i++) {
+            storage[i].type  = storage[i + height].type; // Shift Type too!
             storage[i].name  = storage[i + height].name;
             storage[i].value = storage[i + height].value;
         }
 
-        // 3. Clear the tail entries that are now stale duplicates
         for (int i = MAX_SIZE - height; i < MAX_SIZE; i++) {
             storage[i].clear();
         }
 
-        // 4. Update PCB boundaries of every process that lived ABOVE the freed block,
-        //    both in the ProcessController's PCB object AND in memory itself
         for (PCB other : ProcessController.processTable) {
-            if (other.processID == processID) continue;
+            if (other.processID == processID || other.lowerBoundary == -1) continue;
 
             if (other.lowerBoundary > upper) {
                 other.lowerBoundary -= height;
                 other.upperBoundary -= height;
+                other.programCounter -= height; 
 
-                // PCB layout: [0]=PCB_ID, [1]=PCB_State, [2]=PCB_PC, [3]=PCB_Bounds
-                // Update PCB_Bounds in memory
-                storage[other.lowerBoundary + 3].value =
-                    other.lowerBoundary + "-" + other.upperBoundary;
-
-                // Update PCB_PC in memory (it holds an absolute address, so it must shift too)
-                int oldPC = Integer.parseInt(storage[other.lowerBoundary + 2].value);
-                storage[other.lowerBoundary + 2].value = String.valueOf(oldPC - height);
+                storage[other.lowerBoundary + 3].value = other.lowerBoundary + "-" + other.upperBoundary;
+                storage[other.lowerBoundary + 2].value = String.valueOf(other.programCounter);
             }
         }
+        
+        pcb.processState = os_process.ProcessState.Terminated;
     }
     	 public static void getIntoMemory(int processID, Queue<Integer> readyQueue) {
         PCB pcb = ProcessController.getProcess(processID);
