@@ -2,6 +2,7 @@ package memory;
 
 import java.io.*;
 import java.util.List;
+import java.util.Queue;
 
 import os_process.*;
 
@@ -87,43 +88,65 @@ public class Memory {
 
     public static void swapOut(int processId) {
         PCB pcb = ProcessController.getProcess(processId);
-        String filename = "Disk_Process_" + pcb.processID + ".txt";
+        
+        // 1. Create a designated temporary file, leaving input files untouched
+        String filename = "temp_swap_process_" + pcb.processID + ".txt";
+        
         try (BufferedWriter writer = new BufferedWriter(new FileWriter(filename))) {
             for (int i = pcb.lowerBoundary; i <= pcb.upperBoundary; i++) {
                 writer.write(storage[i].name + "," + storage[i].value + "\n");
-                storage[i].clear(); // Free memory
+                storage[i].clear(); 
             }
-            System.out.println("Process " + pcb.processID + " swapped OUT to disk.");
+            
+            // 2. Convert absolute PC to a relative index before losing boundaries
+            int relativePC = pcb.programCounter - pcb.lowerBoundary - 4;
+            pcb.programCounter = relativePC; 
+            
+            // 3. Mark PCB as on-disk
+            pcb.lowerBoundary = -1;
+            pcb.upperBoundary = -1;
+            System.out.println("Process " + pcb.processID + " swapped OUT to temporary file.");
         } catch (IOException e) {
             System.out.println("Error swapping out process: " + e.getMessage());
         }
     }
 
-    public static void swapIn(int processId, int requiredSpace) {
-        String filename = "Disk_Process_" + processId + ".txt";
-        int startIndex = findFreeSpace(requiredSpace);
+    public static void swapIn(int processId) {
+        PCB pcb = ProcessController.getProcess(processId);
+        int requiredSpace = ProcessController.getInstructionCount(processId) + 7;
         
+        int startIndex = findFreeSpace(requiredSpace);
         if(startIndex == -1) {
              System.out.println("Cannot swap in Process " + processId + ": Memory full.");
              return;
         }
 
+        // 1. Read from the temporary file we created
+        String filename = "temp_swap_process_" + processId + ".txt";
         try (BufferedReader reader = new BufferedReader(new FileReader(filename))) {
             String line;
             int currentIndex = startIndex;
             while ((line = reader.readLine()) != null) {
                 String[] parts = line.split(",");
                 storage[currentIndex].name = parts[0];
-                storage[currentIndex].value = parts[1];
+                storage[currentIndex].value = (parts.length > 1) ? parts[1] : "";
                 currentIndex++;
             }
             
-            // Update the PCB boundaries in memory
-            storage[startIndex + 3].value = startIndex + "-" + (currentIndex - 1);
-            System.out.println("Process " + processId + " swapped IN from disk to index " + startIndex);
-            
-            // Delete the disk file after swapping in
+            // 2. Safely delete the temp file so it doesn't conflict or clutter
             new File(filename).delete();
+            
+            // 3. Get the relative PC we saved during swapOut and recalculate absolute addresses
+            int relativePC = pcb.programCounter;
+            pcb.lowerBoundary = startIndex;
+            pcb.upperBoundary = startIndex + requiredSpace - 1;
+            pcb.programCounter = startIndex + 4 + relativePC;
+
+            // 4. Update PCB values inside the physical memory array
+            storage[startIndex + 2].value = String.valueOf(pcb.programCounter);
+            storage[startIndex + 3].value = pcb.lowerBoundary + "-" + pcb.upperBoundary;
+            
+            System.out.println("Process " + processId + " swapped IN from temporary file to index " + startIndex);
         } catch (IOException e) {
             System.out.println("Error swapping in process: " + e.getMessage());
         }
@@ -222,68 +245,49 @@ public class Memory {
             }
         }
     }
-    	 public static void getinotmemory(int processID){
-	      PCB pcb = ProcessController.getProcess(processID);
-	      int position = 0 ;
-	      int countmemory = 0;
-	      int lowestpriorety = Integer.valueOf(storage[0].value);
-	      int max = 0;
-            if(lowestpriorety == null){
-             swapIn( processID, 1);
-                return ;
-            }
-          
+    	 public static void getIntoMemory(int processID, Queue<Integer> readyQueue) {
+        PCB pcb = ProcessController.getProcess(processID);
+        int requiredSpace = ProcessController.getInstructionCount(processID) + 7;
 
-	      boolean nospace = true ;
-	       for(int i = 0; i < 40 ; i++){
-	          if (storage[i].name = "PCB_ID" && storage[i].value = String.valueOf(processId)){
-	        	  return ;
-	          }
-	          
-	       }
-	       for(int i = 0 ; i < 40 ; i++){
-    		   if(storage[i].name == null){
-    			   break ;
-    		   }
-    		   countmemory++;
-    	   }
-    	   if((40 - countmemory) > (pcb.upperBoundary - pcb.lowerBoundary)){
-    		   nospace = false ;
-    	   }
-	       
-	       if(nospace){
-	    	   while(nospace == true ){
-	    	   for(int i = 0 ; i < 40 ; i++){
-	    		   if(storage[i].name = "PCB_ID"){
-	    			   for (int element : readyqueue) {
-	    			        if (element.equals(Integer.valueOf(storage[i].value))) {
-	    			             break ; 
-	    			        }
-	    			        position++;
-	    			    }
-	    			   if(position > max){
-	    				   max = position ;
-                           lowestpriorety = Integer.valueOf(storage[i].value) ;
-	    			   }
-					   position = 0 ;
-	    		   }
-	    	   }
-	    	   swapOut(lowestpriorety);
-				   countmemory = 0 ;
-	    	   for(int i = 0 ; i < 40 ; i++){
-	    		   if(storage[i].name == null){
-	    			   break ;
-	    		   }
-	    		   countmemory++
-	    	   }
-	    	   if((40 - countmemory) > (pcb.upperBoundary - pcb.lowerBoundary)){
-	    		   nospace = false ;
-	    	   }
-				   
-	    	   }
-	    	   
-	       }
-	       swapIn( processID, 1);
-	    
-	    } 
+        for (int i = 0; i < MAX_SIZE; i++) {
+            if (storage[i].name != null && storage[i].name.equals("PCB_ID") && storage[i].value.equals(String.valueOf(processID))) {
+                return; // Already in memory
+            }
+        }
+
+        while (findFreeSpace(requiredSpace) == -1) {
+            int victimID = -1;
+            int maxPositionInQueue = -1;
+            List<Integer> queueList = new java.util.ArrayList<>(readyQueue);
+
+            for (int i = 0; i < MAX_SIZE; i++) {
+                if (storage[i].name != null && storage[i].name.equals("PCB_ID")) {
+                    int inMemoryProcessID = Integer.parseInt(storage[i].value);
+                    int position = queueList.indexOf(inMemoryProcessID);
+                    
+                    if (position > maxPositionInQueue) {
+                        maxPositionInQueue = position;
+                        victimID = inMemoryProcessID;
+                    }
+                }
+            }
+
+            if (victimID == -1) { 
+                for (int i = 0; i < MAX_SIZE; i++) {
+                    if (storage[i].name != null && storage[i].name.equals("PCB_ID")) {
+                        victimID = Integer.parseInt(storage[i].value);
+                        break;
+                    }
+                }
+            }
+
+            if (victimID != -1) {
+                swapOut(victimID);
+            } else {
+                return; 
+            }
+        }
+        
+        swapIn(processID); 
+    } 
 }
