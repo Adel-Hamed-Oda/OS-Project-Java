@@ -41,7 +41,6 @@ public class MutexManager {
 
 	public static void signalinput(){
 		userInput += 1 ;
-	
 	}
 	public static void signaloutput(){
 		userOutput += 1 ;

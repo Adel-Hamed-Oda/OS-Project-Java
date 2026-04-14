@@ -4,7 +4,9 @@ import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.Queue;
 import java.util.Scanner;
-import memory.Memory;
+import memory.*;
+import os_process.*;
+import parser.*;
 
 public class Scheduler {
 
@@ -124,16 +126,37 @@ public class Scheduler {
         while (!processes.isEmpty()) {
             updateReadyQueue(processes);
             int index = get_HRRN(processes);
+            int processId = processes.get(index).getP_id();
             if (index != -1) {
-                Memory.getinotmemory(processes.get(index).getP_id());
+                try {
+                    Memory_Refactored.allocateProcess(processId);
+                } catch (NotEnoughMemoryException e) {
+                    int requiredSpace = ProcessController.getInstructions(processId).length + 3 + 4;
+                    
+                    Memory_Refactored.trySwapOut(requiredSpace);
+                    try {
+                        Memory_Refactored.allocateProcess(processId);
+                    } catch (NotEnoughMemoryException ex) {
+                        System.out.println("Error: Not enough memory to allocate process " + processId);
+                        return;
+                    }
+                }
 
                 current_process = processes.get(index);
                 updateReadyQueue(processes);
 
                 for (int i = 0; i < current_process.getBurst_time(); i++) {
                     System.out.println("Process " + current_process.getP_id() + " is running at time " + current_time);
-                    Memory.printMemory();
                     
+                    int currectPC = Memory_Refactored.getPC(processId);
+                    String instruction = Memory_Refactored.getInstruction(processId, currectPC);
+                    Parser.parse(instruction);
+                    Memory_Refactored.setPC(processId, currectPC + 1);
+
+                    Memory_Refactored.printProcess(processId);
+                    
+                    System.out.println("Press Enter to continue...");
+                    @SuppressWarnings("resource") // same as system calls
                     Scanner sc = new Scanner(System.in);
                     sc.nextLine();
 

@@ -12,44 +12,44 @@ public class Parser {
         void execute(String[] args);
     }
 
-    private final Map<String, Command> commandMap = new HashMap<>();
+    private static final Map<String, Command> commandMap = new HashMap<>();
 
-    public Parser() {
-        commandMap.put("semWait", this::semWait);
-        commandMap.put("semSignal", this::semSignal);
-        commandMap.put("print", this::print);
-        commandMap.put("assign", this::assign);
-        commandMap.put("writeFile", this::writeFile);
-        commandMap.put("printToFrom", this::printToFrom);
+    public static void initParser() {
+        commandMap.put("semWait", Parser::semWait);
+        commandMap.put("semSignal", Parser::semSignal);
+        commandMap.put("print", Parser::print);
+        commandMap.put("assign", Parser::assign);
+        commandMap.put("writeFile", Parser::writeFile);
+        commandMap.put("printFromTo", Parser::printFromTo);
     }
 
-    private void semWait(String[] args) throws IllegalArgumentException {
-        if (args.length < 2) {
+    private static void semWait(String[] args) throws IllegalArgumentException {
+        if (args.length < 1) {
             throw new IllegalArgumentException("usage: semWait <mutexName>");
         }
 
-        switch (args[1]) {
-            case "input" -> {
+        switch (args[0]) {
+            case "userInput" -> {
                 if (!MutexManager.waitinput(Scheduler.getCurrentProcessID())) {
                     Scheduler.blockProcessOnInput();
                 }
             }
-            case "output" -> {
+            case "userOutput" -> {
                 if (!MutexManager.waitoutput(Scheduler.getCurrentProcessID())) {
                     Scheduler.blockProcessOnOutput();
                 }
             }
-            case "memory" -> {
+            case "file" -> {
                 if (!MutexManager.waitmemory(Scheduler.getCurrentProcessID())) {
                     Scheduler.blockProcessOnMemory();
                 }
             }
-            default -> throw new IllegalArgumentException("Unknown mutex: " + args[1]);
+            default -> throw new IllegalArgumentException("Unknown mutex: " + args[0]);
         }
     }
 
-    private void semSignal(String[] args) throws IllegalArgumentException {
-        if (args.length < 2) {
+    private static void semSignal(String[] args) throws IllegalArgumentException {
+        if (args.length < 1) {
             throw new IllegalArgumentException("usage: semSignal <mutexName>");
         }
 
@@ -58,130 +58,130 @@ public class Parser {
         // by an outside process, think semWait Input followed by semSignal Output. This doesn't happen in the given examples
         // but I think we should see what we can do about it
 
-        switch (args[1]) {
-            case "input" -> {
+        switch (args[0]) {
+            case "userInput" -> {
                 MutexManager.signalinput();
                 Scheduler.unblockProcessOnInput();
             }
-            case "output" -> {
+            case "userOutput" -> {
                 MutexManager.signaloutput();
                 Scheduler.unblockProcessOnOutput();
             }
-            case "memory" -> {
+            case "file" -> {
                 MutexManager.signalmemory();
                 Scheduler.unblockProcessOnMemory();
             }
-            default -> throw new IllegalArgumentException("Unknown mutex: " + args[1]);
+            default -> throw new IllegalArgumentException("Unknown mutex: " + args[0]);
         }
     }
 
-    private void print(String[] args) throws IllegalArgumentException {
-        if (args.length < 2) {
+    private static void print(String[] args) throws IllegalArgumentException {
+        if (args.length < 1) {
             throw new IllegalArgumentException("usage: print <message> || print <variable> || print input || print readFile <filePath>");
         }
 
-        if (args[1].startsWith("\"") && args[1].endsWith("\"")) {
+        if (args[0].startsWith("\"") && args[0].endsWith("\"")) {
 
-            String message = args[1].substring(1, args[1].length() - 1);
+            String message = args[0].substring(1, args[0].length() - 1);
             SystemCalls.print(message);
 
-        } else if (args[1].equals("input")) {
+        } else if (args[0].equals("input")) {
             
             String input = SystemCalls.input();
 
             SystemCalls.print(input);
 
-        } else if (args[1].equals("readFile")) {
+        } else if (args[0].equals("readFile")) {
             
-            if (args.length < 3) {
+            if (args.length < 2) {
                 throw new IllegalArgumentException("usage: print readFile <filePath>");
             }
 
-            String fileContent = SystemCalls.readFile(args[2]);
+            String fileContent = SystemCalls.readFile(args[1]);
 
             SystemCalls.print(fileContent);
 
         } else {
 
-            String value = SystemCalls.readFromMemory(args[1]);
+            String value = SystemCalls.readFromMemory(args[0]);
             SystemCalls.print(value);
 
         }
     }
 
-    private void assign(String[] args) throws IllegalArgumentException {
-        if (args.length < 3) {
+    private static void assign(String[] args) throws IllegalArgumentException {
+        if (args.length < 2) {
             throw new IllegalArgumentException("usage: assign <variable> <value> || assign <variable> input || assign <variable> readFile <filePath> || assign <variable1> <variable2>");
         }
 
-        if (args[2].startsWith("\"") && args[2].endsWith("\"")) {
+        if (args[1].startsWith("\"") && args[1].endsWith("\"")) {
             
-            args[2] = args[2].substring(1, args[2].length() - 1);
+            args[1] = args[1].substring(1, args[1].length() - 1);
 
-            SystemCalls.writeToMemory(args[1], args[2]);
+            SystemCalls.writeToMemory(args[0], args[1]);
 
-        } else if (args[2].equals("input")) {
+        } else if (args[1].equals("input")) {
             
             String input = SystemCalls.input();
 
-            SystemCalls.writeToMemory(args[1], input);
+            SystemCalls.writeToMemory(args[0], input);
 
-        } else if (args[2].equals("readFile")) {
+        } else if (args[1].equals("readFile")) {
             
-            if (args.length < 4) {
+            if (args.length < 3) {
                 throw new IllegalArgumentException("usage: assign <variable> readFile <filePath>");
             }
 
-            String fileContent = SystemCalls.readFile(args[3]);
+            String fileContent = SystemCalls.readFile(args[2]);
 
-            SystemCalls.writeToMemory(args[1], fileContent);
+            SystemCalls.writeToMemory(args[0], fileContent);
 
         } else {
 
-            String value = SystemCalls.readFromMemory(args[2]);
+            String value = SystemCalls.readFromMemory(args[1]);
 
-            SystemCalls.writeToMemory(args[1], value);
+            SystemCalls.writeToMemory(args[0], value);
 
         }
     }
 
-    private void writeFile(String[] args) throws IllegalArgumentException {
-        if (args.length < 3) {
+    private static void writeFile(String[] args) throws IllegalArgumentException {
+        if (args.length < 2) {
             throw new IllegalArgumentException("usage: writeFile <filePath> <content>");
         }
 
-        if (args[2].startsWith("\"") && args[2].endsWith("\"")) {
+        if (args[1].startsWith("\"") && args[1].endsWith("\"")) {
 
-            args[2] = args[2].substring(1, args[2].length() - 1);
+            args[1] = args[1].substring(1, args[1].length() - 1);
         
-            SystemCalls.writeFile(args[1], args[2]);
+            SystemCalls.writeFile(SystemCalls.readFromMemory(args[0]), args[1]);
 
-        } else if (args[2].equals("input")) {
+        } else if (args[1].equals("input")) {
 
             String input = SystemCalls.input();
 
-            SystemCalls.writeFile(args[1], input);
+            SystemCalls.writeFile(SystemCalls.readFromMemory(args[0]), input);
 
         } else {
             
-            String value = SystemCalls.readFromMemory(args[2]);
+            String value = SystemCalls.readFromMemory(args[1]);
             
-            SystemCalls.writeFile(args[1], value);
+            SystemCalls.writeFile(SystemCalls.readFromMemory(args[0]), value);
 
         }
     }
 
-    private void printToFrom(String[] args) throws IllegalArgumentException {
-        if (args.length < 3) {
-            throw new IllegalArgumentException("usage: printToFrom <variable1> <variable2>");
+    private static void printFromTo(String[] args) throws IllegalArgumentException {
+        if (args.length < 2) {
+            throw new IllegalArgumentException("usage: printFromTo <variable1> <variable2>");
         }
 
-        SystemCalls.printToFrom(args[1], args[2]);
+        SystemCalls.printFromTo(args[0], args[1]);
     }
 
-    public void parse(String input) throws IllegalArgumentException {
+    public static void parse(String input) throws IllegalArgumentException {
         String[] parts = input.trim().split("\\s+", 2);
-        String commandName = parts[0].toLowerCase();
+        String commandName = parts[0];
         String[] args = parts.length > 1 ? parts[1].split("\\s+") : new String[0];
 
         Command command = commandMap.get(commandName);

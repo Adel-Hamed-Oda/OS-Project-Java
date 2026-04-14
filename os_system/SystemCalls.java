@@ -6,7 +6,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.Scanner;
 
-import memory.Memory;
+import memory.Memory_Refactored;
 import scheduler.Scheduler;
 
 public class SystemCalls {
@@ -45,18 +45,18 @@ public class SystemCalls {
     }
 
     public static String readFromMemory(String var) {
-        return Memory.read(Memory.getVariableAddress(var, Scheduler.getCurrentProcessID()), Scheduler.getCurrentProcessID());
+        return Memory_Refactored.getVariable(Scheduler.getCurrentProcessID(), var);
     }
 
     public static void writeToMemory(String var, String value) {
-        Memory.assignVariable(var, value, Scheduler.getCurrentProcessID());
+        Memory_Refactored.setVariable(Scheduler.getCurrentProcessID(), var, value);
     }
 
-    public static void printToFrom(String var1, String var2) {
+    public static void printFromTo(String var1, String var2) {
         int pid = Scheduler.getCurrentProcessID();
         
-        String value1 = Memory.read(Memory.getVariableAddress(var1, pid), pid);
-        String value2 = Memory.read(Memory.getVariableAddress(var2, pid), pid);
+        String value1 = Memory_Refactored.getVariable(pid, var1);
+        String value2 = Memory_Refactored.getVariable(pid, var2);
         
         int num1 = Integer.parseInt(value1);
         int num2 = Integer.parseInt(value2);
