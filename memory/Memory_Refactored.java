@@ -204,8 +204,9 @@ public class Memory_Refactored {
                 int processId = Integer.parseInt(memory[i].value);
                 int[] bounds = findProcessBounds(processId);
                 int processSize = bounds[1] - bounds[0] + 1;
+                int emptySpace = getAmountOfFreeSpace();
 
-                if (processSize >= requiredSpace) {
+                if (processSize + emptySpace >= requiredSpace) {
                     saveContext(processId);
 
                     compactMemory();
@@ -297,6 +298,17 @@ public class Memory_Refactored {
         return new int[]{lowerBoundary, upperBoundary};
     }
 
+    private static int getAmountOfFreeSpace() {
+        int freeCount = 0;
+
+        for (int i = 0; i < MEMORY_SIZE; i++) {
+            if (memory[i].type == CellType.Free) {
+                freeCount++;
+            }
+        }
+        return freeCount;
+    }
+    
     //#endregion
 }
 

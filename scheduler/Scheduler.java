@@ -3,7 +3,6 @@ package scheduler;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.Queue;
-import java.util.Scanner;
 import memory.*;
 import os_process.*;
 import parser.*;
@@ -155,10 +154,10 @@ public class Scheduler {
 
                     Memory_Refactored.printProcess(processId);
                     
-                    System.out.println("Press Enter to continue...");
+                    /*System.out.println("Press Enter to continue...");
                     @SuppressWarnings("resource") // same as system calls
                     Scanner sc = new Scanner(System.in);
-                    sc.nextLine();
+                    sc.nextLine();*/
 
                     current_time++;
                 }

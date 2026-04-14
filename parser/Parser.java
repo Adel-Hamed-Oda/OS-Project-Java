@@ -129,10 +129,10 @@ public class Parser {
         } else if (args[1].equals("readFile")) {
             
             if (args.length < 3) {
-                throw new IllegalArgumentException("usage: assign <variable> readFile <filePath>");
+                throw new IllegalArgumentException("usage: assign <variable> readFile <variable>");
             }
 
-            String fileContent = SystemCalls.readFile(args[2]);
+            String fileContent = SystemCalls.readFile(SystemCalls.readFromMemory(args[2]));
 
             SystemCalls.writeToMemory(args[0], fileContent);
 
