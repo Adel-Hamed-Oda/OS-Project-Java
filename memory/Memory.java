@@ -2,8 +2,8 @@ package memory;
 
 import java.io.*;
 import java.util.List;
-
 import os_process.*;
+import scheduler.Scheduler;
 
 public class Memory {
     private static MemoryWord[] storage;
@@ -104,8 +104,8 @@ public class Memory {
         int startIndex = findFreeSpace(requiredSpace);
         
         if(startIndex == -1) {
-             System.out.println("Cannot swap in Process " + processId + ": Memory full.");
-             return;
+            System.out.println("Cannot swap in Process " + processId + ": Memory full.");
+            return;
         }
 
         try (BufferedReader reader = new BufferedReader(new FileReader(filename))) {
@@ -222,68 +222,87 @@ public class Memory {
             }
         }
     }
-    	 public static void getinotmemory(int processID){
-	      PCB pcb = ProcessController.getProcess(processID);
-	      int position = 0 ;
-	      int countmemory = 0;
-	      int lowestpriorety = Integer.valueOf(storage[0].value);
-	      int max = 0;
-            if(lowestpriorety == null){
-             swapIn( processID, 1);
+    
+    // In general I replaced Integer.valueOf with Integer.parseInt
+    public static void getinotmemory(int processID) {
+        PCB pcb = ProcessController.getProcess(processID);
+        int position = 0 ;
+        int countmemory = 0;
+        int lowestpriority = 0;
+        int max = 0;
+        
+        if (storage[0].name == null){
+            swapIn(processID, ProcessController.getInstructionCount(processID) + 3 + 4);
+            return;
+        } else {
+            lowestpriority = Integer.parseInt(storage[0].value);
+        }
+
+        boolean nospace = true ;
+        for(int i = 0; i < 40 ; i++){
+            if (storage[i].name.equals("PCB_ID") && storage[i].value.equals(String.valueOf(processID))){
                 return ;
             }
-          
+        }
 
-	      boolean nospace = true ;
-	       for(int i = 0; i < 40 ; i++){
-	          if (storage[i].name = "PCB_ID" && storage[i].value = String.valueOf(processId)){
-	        	  return ;
-	          }
-	          
-	       }
-	       for(int i = 0 ; i < 40 ; i++){
-    		   if(storage[i].name == null){
-    			   break ;
-    		   }
-    		   countmemory++;
-    	   }
-    	   if((40 - countmemory) > (pcb.upperBoundary - pcb.lowerBoundary)){
-    		   nospace = false ;
-    	   }
-	       
-	       if(nospace){
-	    	   while(nospace == true ){
-	    	   for(int i = 0 ; i < 40 ; i++){
-	    		   if(storage[i].name = "PCB_ID"){
-	    			   for (int element : readyqueue) {
-	    			        if (element.equals(Integer.valueOf(storage[i].value))) {
-	    			             break ; 
-	    			        }
-	    			        position++;
-	    			    }
-	    			   if(position > max){
-	    				   max = position ;
-                           lowestpriorety = Integer.valueOf(storage[i].value) ;
-	    			   }
-					   position = 0 ;
-	    		   }
-	    	   }
-	    	   swapOut(lowestpriorety);
-				   countmemory = 0 ;
-	    	   for(int i = 0 ; i < 40 ; i++){
-	    		   if(storage[i].name == null){
-	    			   break ;
-	    		   }
-	    		   countmemory++
-	    	   }
-	    	   if((40 - countmemory) > (pcb.upperBoundary - pcb.lowerBoundary)){
-	    		   nospace = false ;
-	    	   }
-				   
-	    	   }
-	    	   
-	       }
-	       swapIn( processID, 1);
-	    
-	    } 
+        for(int i = 0 ; i < 40 ; i++){
+            if(storage[i].name == null){
+                break ;
+            }
+            countmemory++;
+        }
+        if((40 - countmemory) > (pcb.upperBoundary - pcb.lowerBoundary)){
+            nospace = false ;
+        }
+        
+        if (nospace) {
+            while(nospace == true ) {
+                for(int i = 0 ; i < 40 ; i++) {
+                    if(storage[i].name.equals("PCB_ID")) { // and here, why not .equals?
+                        for (int element : Scheduler.readyQueue) {
+                            if (element == Integer.parseInt(storage[i].value)) { // why did you do .equals, just do ==
+                                break;
+                            }
+                            position++;
+                        }
+                        if(position > max) {
+                            max = position ;
+                            lowestpriority = Integer.parseInt(storage[i].value) ;
+                        }
+                        position = 0 ;
+                    }
+                }
+
+                swapOut(lowestpriority);
+                countmemory = 0;
+
+                for (int i = 0 ; i < 40 ; i++) {
+                    if(storage[i].name == null){
+                        break;
+                    }
+                    countmemory++;
+                }
+
+                if ((40 - countmemory) > (pcb.upperBoundary - pcb.lowerBoundary)) {
+                    nospace = false ;
+                }
+            }
+        }
+
+        swapIn( processID, 1);
+	}
+
+    public static void compactMemory() {
+        int writeIndex = 0;
+        for (MemoryWord word : storage) {
+            if (word.name != null && word.value != null) {
+                storage[writeIndex++] = word;
+            }
+        }
+        
+        while (writeIndex < storage.length) {
+            storage[writeIndex++].name = null;
+            storage[writeIndex++].value = null;
+        }
+    }
 }

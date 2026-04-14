@@ -1,9 +1,9 @@
 package scheduler;
 
 public class OS_Process {
-    private int p_id;
-    private int arrival_time;
-    private int burst_time;
+    private final int p_id;
+    private final int arrival_time;
+    private final int burst_time;
     private int executed_time;
     private boolean is_in_ready_queue;
 

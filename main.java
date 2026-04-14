@@ -12,7 +12,7 @@ public class Main {
 
         ArrayList<OS_Process> processes = Scheduler.convertjobPoolToProcesses();
 
-        Scheduler.simulate_RR(processes, 2);
+        Scheduler.simulate_HRRN(processes);
     }
 
     public static void Init(String[] args) {

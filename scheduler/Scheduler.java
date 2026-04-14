@@ -1,18 +1,18 @@
 package scheduler;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.Queue;
+import java.util.Scanner;
 import memory.Memory;
 
 public class Scheduler {
 
-    public static Queue<Integer> readyQueue = new LinkedList<Integer>();  // should things from the waitnig queue return to the beginning or the end of the queue?
-    public static Queue<Integer> waitingQueueInput = new LinkedList<Integer>();
-    public static Queue<Integer> waitingQueueOutput = new LinkedList<Integer>();
-    public static Queue<Integer> waitingQueueMemory = new LinkedList<Integer>();
-    public static Queue<Integer> jobPool = new LinkedList<Integer>();
+    public static Queue<Integer> readyQueue = new LinkedList<>();  // should things from the waitnig queue return to the beginning or the end of the queue?
+    public static Queue<Integer> waitingQueueInput = new LinkedList<>();
+    public static Queue<Integer> waitingQueueOutput = new LinkedList<>();
+    public static Queue<Integer> waitingQueueMemory = new LinkedList<>();
+    public static Queue<Integer> jobPool = new LinkedList<>();
 
     final public static ArrayList<Integer> arrival_times = new ArrayList<>();
     final public static ArrayList<Integer> burst_times = new ArrayList<>();
@@ -69,7 +69,7 @@ public class Scheduler {
     }
 
     public static ArrayList<OS_Process> convertjobPoolToProcesses() {
-        ArrayList<OS_Process> processes = new ArrayList<OS_Process>();
+        ArrayList<OS_Process> processes = new ArrayList<>();
         ArrayList<Integer> jobPoolArr = new ArrayList<>(jobPool);
         for (int i = 0; i < jobPoolArr.size(); i++) {
             int p_id = jobPoolArr.get(i);
@@ -121,22 +121,29 @@ public class Scheduler {
         processes.sort((p1, p2) -> Integer.compare(p1.getArrival_time(), p2.getArrival_time()));
         current_time = 0;
 
-
         while (!processes.isEmpty()) {
             updateReadyQueue(processes);
             int index = get_HRRN(processes);
             if (index != -1) {
+                Memory.getinotmemory(processes.get(index).getP_id());
+
                 current_process = processes.get(index);
                 updateReadyQueue(processes);
+
                 for (int i = 0; i < current_process.getBurst_time(); i++) {
                     System.out.println("Process " + current_process.getP_id() + " is running at time " + current_time);
-                    // Memory.printMemory();
+                    Memory.printMemory();
+                    
+                    Scanner sc = new Scanner(System.in);
+                    sc.nextLine();
 
                     current_time++;
                 }
+
                 current_process.set_Executed_time(current_process.getBurst_time());
                 readyQueue.remove(current_process.getP_id());
                 processes.remove(index);
+                
                 System.out.println("Process " + current_process.getP_id() + " completed at time " + current_time);
                 current_process = null;
             } else {
@@ -168,7 +175,7 @@ public class Scheduler {
                 System.out.println("Process " + current_process.getP_id() + " is running at time " + current_time);
                 current_time++;
                 current_process.set_Executed_time(current_process.getExecuted_time() + 1);
-                if(processes.size() > 0 && processes.get(0).getArrival_time() <= current_time) {
+                if(!processes.isEmpty() && processes.get(0).getArrival_time() <= current_time) {
                     RRQueue.offer(processes.get(0));
                     readyQueue.offer(processes.get(0).getP_id());
                     processes.remove(0);
@@ -183,22 +190,5 @@ public class Scheduler {
             current_process = null;
         }
             
-    }
-
-    public static void main(String[] args) {
-
-        // readyQueue.offer(1); 
-        // readyQueue.offer(2);
-        // readyQueue.offer(3);
-
-        jobPool.offer(0);
-        jobPool.offer(1);      
-        jobPool.offer(2);
-
-        ArrayList<OS_Process> processes = convertjobPoolToProcesses();
-
-        // simulate_RR(processes, 2);
-
-        simulate_HRRN(processes);
     }
 }
