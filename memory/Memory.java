@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Queue;
 
 import os_process.*;
+import scheduler.Scheduler;
 
 public class Memory {
     private static MemoryWord[] storage;
@@ -126,8 +127,8 @@ public class Memory {
         
         int startIndex = findFreeSpace(requiredSpace);
         if(startIndex == -1) {
-             System.out.println("Cannot swap in Process " + processId + ": Memory full.");
-             return;
+            System.out.println("Cannot swap in Process " + processId + ": Memory full.");
+            return;
         }
 
         // 1. Read from the temporary file we created
