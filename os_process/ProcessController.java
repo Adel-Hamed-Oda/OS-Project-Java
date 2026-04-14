@@ -45,4 +45,10 @@ public class ProcessController {
         String[] instructions = getInstructions(processID);
         return instructions != null ? instructions.length : 0;
     }
+
+    public static boolean contextFileExists(int processID) {
+        String contextFileName = "Process_" + processID + "_Context.txt";
+        java.io.File contextFile = new java.io.File(contextFileName);
+        return contextFile.exists();
+    }
 }

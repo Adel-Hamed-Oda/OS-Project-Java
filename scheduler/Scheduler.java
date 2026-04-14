@@ -127,37 +127,22 @@ public class Scheduler {
             int index = get_HRRN(processes);
             int processId = processes.get(index).getP_id();
             if (index != -1) {
-                try {
-                    Memory_Refactored.allocateProcess(processId);
-                } catch (NotEnoughMemoryException e) {
-                    int requiredSpace = ProcessController.getInstructions(processId).length + 3 + 4;
-                    
-                    Memory_Refactored.trySwapOut(requiredSpace);
-                    try {
-                        Memory_Refactored.allocateProcess(processId);
-                    } catch (NotEnoughMemoryException ex) {
-                        System.out.println("Error: Not enough memory to allocate process " + processId);
-                        return;
-                    }
+                if (!Memory_Refactored.tryLoadProcess(processId, false)) {
+                    System.out.println("Error: Not enough memory to load process " + processId);
+                    return;
                 }
 
                 current_process = processes.get(index);
                 updateReadyQueue(processes);
 
                 for (int i = 0; i < current_process.getBurst_time(); i++) {
+                    Memory_Refactored.printProcess(processId);
                     System.out.println("Process " + current_process.getP_id() + " is running at time " + current_time);
-                    
+
                     int currectPC = Memory_Refactored.getPC(processId);
                     String instruction = Memory_Refactored.getInstruction(processId, currectPC);
                     Parser.parse(instruction);
                     Memory_Refactored.setPC(processId, currectPC + 1);
-
-                    Memory_Refactored.printProcess(processId);
-                    
-                    /*System.out.println("Press Enter to continue...");
-                    @SuppressWarnings("resource") // same as system calls
-                    Scanner sc = new Scanner(System.in);
-                    sc.nextLine();*/
 
                     current_time++;
                 }
@@ -190,11 +175,27 @@ public class Scheduler {
                     processes.remove(0);
                 }
             }
+
             current_process = RRQueue.poll();
+            int processId = current_process.getP_id();
+
+            if (!Memory_Refactored.tryLoadProcess(processId, true)) {
+                System.out.println("Error: Not enough memory to load process " + processId);
+                return;
+            }
+
             readyQueue.remove(current_process.getP_id());
             int execution_time = Math.min(time_quantum, current_process.getBurst_time() - current_process.getExecuted_time());
+
             for (int i = 0; i < execution_time; i++) {
+                Memory_Refactored.printProcess(processId);
                 System.out.println("Process " + current_process.getP_id() + " is running at time " + current_time);
+
+                int currectPC = Memory_Refactored.getPC(processId);
+                String instruction = Memory_Refactored.getInstruction(processId, currectPC);
+                Parser.parse(instruction);
+                Memory_Refactored.setPC(processId, currectPC + 1);
+                
                 current_time++;
                 current_process.set_Executed_time(current_process.getExecuted_time() + 1);
                 if(!processes.isEmpty() && processes.get(0).getArrival_time() <= current_time) {

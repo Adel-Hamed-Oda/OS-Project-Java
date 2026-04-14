@@ -182,12 +182,18 @@ public class Memory_Refactored {
         compactMemory();
     }
 
-    public static void loadContext(int processId, int lowerBoundary) {
+    public static void loadContext(int processId) throws NotEnoughMemoryException {
         String filename = "Process_" + processId + "_Context.txt";
 
         try (var reader = new BufferedReader(new FileReader(filename))) {
             String line;
             int index = 0;
+
+            long lineCount = reader.lines().count();
+            int lowerBoundary = findFreeSpace((int) lineCount);
+            if (lowerBoundary == -1) {
+                throw new NotEnoughMemoryException("Not enough memory to load context for process " + processId);
+            }
 
             while ((line = reader.readLine()) != null) {
                 memory[lowerBoundary + index].fromString(line);
@@ -198,25 +204,148 @@ public class Memory_Refactored {
         }
     }
 
+    // Improved trySwapOut handles multiple processes, prioritizes victims based on state,
+    // and completely discards terminated processes instead of saving them to disk.
     public static void trySwapOut(int requiredSpace) {
-        for (int i = 0; i < MEMORY_SIZE; i++) {
-            if (memory[i].type == CellType.PCB) {
-                int processId = Integer.parseInt(memory[i].value);
-                int[] bounds = findProcessBounds(processId);
-                int processSize = bounds[1] - bounds[0] + 1;
-                int emptySpace = getAmountOfFreeSpace();
+        while (getAmountOfFreeSpace() < requiredSpace) {
+            int victimId = selectVictimProcess();
 
-                if (processSize + emptySpace >= requiredSpace) {
-                    saveContext(processId);
+            if (victimId == -1) {
+                System.out.println("No suitable process could be swapped out to free up " + requiredSpace + " spaces.");
+                break;
+            }
 
-                    compactMemory();
+            ProcessState state = getProcessState(victimId);
+            
+            // If the process is terminated, we don't need to save its context.
+            // Just wipe it from memory and delete its leftover text file (if any).
+            if (state != null && state.name().equals("Terminated")) {
+                System.out.println("Process " + victimId + " is Terminated. Removing from memory completely.");
+                removeProcessFromMemory(victimId);
+                deleteContextFile(victimId);
+            } else {
+                // Otherwise, it's Blocked, Ready, etc. We must save its context to disk.
+                System.out.println("Swapping out Process " + victimId + " (State: " + state + ") to free memory.");
+                saveContext(victimId); // Note: saveContext() already clears the memory cells
+            }
 
-                    return;
+            // Compact memory after each removal to group free spaces together
+            compactMemory();
+        }
+    }
+
+    //#region Swap-Out Helper Methods
+
+    // Helper method to prioritize which process to kick out of memory.
+    // Priorities: 1. Terminated, 2. Blocked/Waiting, 3. Ready, 4. New.
+    // It avoids swapping out a "Running" process.
+    private static int selectVictimProcess() {
+        int victimId = findProcessByState("Terminated");
+        
+        if (victimId == -1) {
+            victimId = findProcessByState("Blocked"); // Change to "Waiting" if that's what your enum uses
+        }
+        
+        if (victimId == -1) {
+            victimId = findProcessByState("Ready");
+        }
+        
+        if (victimId == -1) {
+            victimId = findProcessByState("New");
+        }
+
+        // Fallback: Just grab the first process we can find that isn't currently "Running"
+        if (victimId == -1) {
+            for (int i = 0; i < MEMORY_SIZE; i++) {
+                if (memory[i].type == CellType.PCB && "id".equals(memory[i].name)) {
+                    int processId = Integer.parseInt(memory[i].value);
+                    ProcessState state = getProcessState(processId);
+                    if (state != null && !state.name().equals("Running")) {
+                        return processId;
+                    }
                 }
             }
         }
 
-        System.out.println("No process could be swapped out to free up " + requiredSpace + " spaces.");
+        return victimId;
+    }
+
+    // Searches memory for a process that matches the specific state name
+    private static int findProcessByState(String targetStateName) {
+        for (int i = 0; i < MEMORY_SIZE; i++) {
+            if (memory[i].type == CellType.PCB && "id".equals(memory[i].name)) {
+                int processId = Integer.parseInt(memory[i].value);
+                ProcessState state = getProcessState(processId);
+                
+                if (state != null && state.name().equalsIgnoreCase(targetStateName)) {
+                    return processId;
+                }
+            }
+        }
+        return -1;
+    }
+
+    // Simply clears the memory cells belonging to a process without saving
+    private static void removeProcessFromMemory(int processId) {
+        int[] bounds = findProcessBounds(processId);
+        if (bounds[0] != -1 && bounds[1] != -1) {
+            for (int i = bounds[0]; i <= bounds[1]; i++) {
+                memory[i].clear();
+            }
+        }
+    }
+
+    // Deletes the context text file for a process from the hard drive
+    private static void deleteContextFile(int processId) {
+        File file = new File("Process_" + processId + "_Context.txt");
+        if (file.exists()) {
+            file.delete();
+        }
+    }
+
+    //#endregion
+
+    public static boolean tryLoadProcess(int processId, boolean tryFindingContext) {
+        if (processExistsInMemory(processId)) {
+            return true; // Process is already in memory, no need to load
+        }
+
+        // Check if we should load an existing context or allocate a new one
+        boolean hasContext = tryFindingContext && ProcessController.contextFileExists(processId);
+
+        try {
+            if (hasContext) {
+                loadContext(processId);
+            } else {
+                allocateProcess(processId);
+            }
+
+            return true; // Success on the first try
+            
+        } catch (NotEnoughMemoryException e) {
+            // Memory is full! Calculate how much space we need to free up.
+            // (Instructions length + 3 variables + 4 PCB slots = length + 7)
+            int requiredSpace = ProcessController.getInstructions(processId).length + 7;
+            
+            // Attempt to swap out an older process to free up space
+            trySwapOut(requiredSpace);
+            
+            // Try loading/allocating one more time now that (hopefully) space is freed
+            try {
+                if (hasContext) {
+                    loadContext(processId);
+                } else {
+                    allocateProcess(processId);
+                }
+
+                return true; // Success on the second try
+                
+            } catch (NotEnoughMemoryException ex) {
+                // If it fails again, we are completely out of options
+                System.out.println("Error: Not enough memory to allocate process " + processId);
+                return false;
+            }
+        }
     }
 
     //#region Utility Methods
@@ -236,7 +365,7 @@ public class Memory_Refactored {
 
         System.out.println("=== Current Process State: ======================================");
         for (int i = lowerBoundary; i <= upperBoundary; i++) {
-            String prefix = (i == getPC(processId) + lowerBoundary + 6) ? "--> " : "    ";
+            String prefix = (i == getPC(processId) + lowerBoundary + 7) ? "--> " : "    ";
 
             System.out.println(prefix + "Address " + i + ": " + memory[i]);
         }
@@ -307,6 +436,18 @@ public class Memory_Refactored {
             }
         }
         return freeCount;
+    }
+
+    private static boolean processExistsInMemory(int processId) {
+        for (int i = 0; i < MEMORY_SIZE; i++) {
+            if (memory[i].type == CellType.PCB && 
+                memory[i].name.equals("id") &&
+                memory[i].value.equals(String.valueOf(processId)))
+            {
+                return true;
+            }
+        }
+        return false;
     }
     
     //#endregion
