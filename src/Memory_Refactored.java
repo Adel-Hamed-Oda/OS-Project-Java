@@ -1,8 +1,6 @@
-package memory;
+package src;
 
 import java.io.*;
-import os_process.*;
-import publicdomain.PublicDomain;
 
 public class Memory_Refactored {
     private static final int MEMORY_SIZE = 40;

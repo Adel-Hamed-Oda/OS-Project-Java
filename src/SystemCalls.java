@@ -1,4 +1,4 @@
-package os_system;
+package src;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -6,10 +6,6 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.Scanner;
-
-import memory.Memory_Refactored;
-import publicdomain.PublicDomain;
-import scheduler.Scheduler;
 
 public class SystemCalls {
     // there are spaces at the end of the output, sheleha please

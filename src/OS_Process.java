@@ -1,4 +1,4 @@
-package scheduler;
+package src;
 
 public class OS_Process {
     private final int p_id;

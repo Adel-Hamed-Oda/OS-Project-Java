@@ -1,4 +1,4 @@
-package memory;
+package src;
 
 public class NotEnoughMemoryException extends Exception {
     public NotEnoughMemoryException(String message) {

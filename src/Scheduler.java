@@ -1,11 +1,8 @@
-package scheduler;
+package src;
 
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.Queue;
-import memory.*;
-import os_process.*;
-import parser.*;
 
 public class Scheduler {
 

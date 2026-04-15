@@ -1,10 +1,7 @@
-package parser;
+package src;
 
 import java.util.HashMap;
 import java.util.Map;
-import mutex.MutexManager;
-import os_system.SystemCalls;
-import scheduler.Scheduler;
 
 public class Parser {
 

@@ -1,4 +1,4 @@
-package os_process;
+package src;
 
 public enum ProcessState {
     New,

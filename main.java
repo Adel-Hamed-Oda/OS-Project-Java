@@ -1,9 +1,6 @@
 import java.util.*;
-import memory.Memory_Refactored;
-import mutex.MutexManager;
-import os_process.ProcessController;
-import scheduler.*;
-import parser.Parser;
+
+import src.*;
 
 public class Main {
     public static void main(String[] args) {
