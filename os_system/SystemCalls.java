@@ -1,33 +1,40 @@
 package os_system;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.Scanner;
 
 import memory.Memory_Refactored;
+import publicdomain.PublicDomain;
 import scheduler.Scheduler;
 
 public class SystemCalls {
     // there are spaces at the end of the output, sheleha please
     public static String readFile(String fileName)  {
         StringBuilder content = new StringBuilder();
-        
-        try (BufferedReader br = new BufferedReader(new FileReader(fileName))) {
+        try {
+            BufferedReader br = new BufferedReader(new FileReader(fileName));
             String line;
             while ((line = br.readLine()) != null) {
-                content.append(line).append("\n");
+                content.append(line).append(" ");
             }
+            br.close();
         } catch (IOException e) {
             System.out.println("Error reading file: " + e.getMessage());
         }
-
         return content.toString();
     }
 
     public static void writeFile(String fileName, String data) {
-        try (FileWriter writer = new FileWriter(fileName)) {
+        File file = new File(fileName);
+        if (PublicDomain.REMOVE_FILES_AFTER_EXECUTION) {
+            file.deleteOnExit();
+        }
+
+        try (FileWriter writer = new FileWriter(file)) {
             writer.write(data);
         } catch (IOException e) {
             System.out.println("Error writing to file: " + e.getMessage());

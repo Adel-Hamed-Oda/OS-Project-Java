@@ -5,9 +5,7 @@ import os_process.ProcessController;
 import scheduler.*;
 import parser.Parser;
 
-public class main {
-
-    // example: file1 loadtime1 file2 loadtime2 file3 loadtime3
+public class Main {
     public static void main(String[] args) {
         Init(args);
 

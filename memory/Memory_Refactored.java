@@ -2,6 +2,7 @@ package memory;
 
 import java.io.*;
 import os_process.*;
+import publicdomain.PublicDomain;
 
 public class Memory_Refactored {
     private static final int MEMORY_SIZE = 40;
@@ -170,7 +171,12 @@ public class Memory_Refactored {
             return;
         }
 
-        try (var writer = new BufferedWriter(new FileWriter(filename))) {
+        File file = new File(filename);
+        if (PublicDomain.REMOVE_FILES_AFTER_EXECUTION) {
+            file.deleteOnExit();
+        }
+
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(file))) {
             for (int i = lowerBoundary; i <= upperBoundary; i++) {
                 writer.append(memory[i] + "\n");
                 memory[i].clear(); // Free memory
@@ -449,7 +455,7 @@ public class Memory_Refactored {
         }
         return false;
     }
-    
+
     //#endregion
 }
 
