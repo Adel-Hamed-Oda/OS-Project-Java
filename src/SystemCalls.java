@@ -8,7 +8,6 @@ import java.io.IOException;
 import java.util.Scanner;
 
 public class SystemCalls {
-    // there are spaces at the end of the output, sheleha please
     public static String readFile(String fileName)  {
         StringBuilder content = new StringBuilder();
         try {
