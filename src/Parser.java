@@ -58,15 +58,24 @@ public class Parser {
         switch (args[0]) {
             case "userInput" -> {
                 MutexManager.signalinput();
-                Scheduler.unblockProcessOnInput();
+                int processID=Scheduler.unblockProcessOnInput();
+                if(processID!=-1) {
+                    MutexManager.waitinput(processID);
+                }
             }
             case "userOutput" -> {
                 MutexManager.signaloutput();
-                Scheduler.unblockProcessOnOutput();
+               int processID= Scheduler.unblockProcessOnOutput();
+                if(processID!=-1) {
+                    MutexManager.waitoutput(processID);
+                }
             }
             case "file" -> {
                 MutexManager.signalmemory();
-                Scheduler.unblockProcessOnMemory();
+                int processID=Scheduler.unblockProcessOnMemory();
+                 if(processID!=-1) {
+                    MutexManager.waitmemory(processID);
+                }
             }
             default -> throw new IllegalArgumentException("Unknown mutex: " + args[0]);
         }

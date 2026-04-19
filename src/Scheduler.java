@@ -25,45 +25,54 @@ public class Scheduler {
     }
 
     public static void blockProcessOnInput() {
-        int currentProcessID = readyQueue.poll();
+        int currentProcessID = getCurrentProcessID();
         if (currentProcessID != -1) {
             waitingQueueInput.offer(currentProcessID);
         }
+        current_process.setBlocked(true);
     }
 
     public static void blockProcessOnOutput() {
-        int currentProcessID = readyQueue.poll();
+        int currentProcessID = getCurrentProcessID();
         if (currentProcessID != -1) {
             waitingQueueOutput.offer(currentProcessID);
         }
+        current_process.setBlocked(true);
     }
 
     public static void blockProcessOnMemory() {
-        int currentProcessID = readyQueue.poll();
+        int currentProcessID = getCurrentProcessID();
         if (currentProcessID != -1) {
             waitingQueueMemory.offer(currentProcessID);
         }
+        current_process.setBlocked(true);
     }
 
-    public static void unblockProcessOnInput() {
+    public static int unblockProcessOnInput() {
         if (!waitingQueueInput.isEmpty()) {
             int processID = waitingQueueInput.poll();
             readyQueue.offer(processID);
+            return processID;
         }
+        return -1;
     }
 
-    public static void unblockProcessOnOutput() {
+    public static int unblockProcessOnOutput() {
         if (!waitingQueueOutput.isEmpty()) {
             int processID = waitingQueueOutput.poll();
             readyQueue.offer(processID);
+            return processID;
         }
+        return -1;
     }
 
-    public static void unblockProcessOnMemory() {
+    public static int unblockProcessOnMemory() {
         if (!waitingQueueMemory.isEmpty()) {
             int processID = waitingQueueMemory.poll();
             readyQueue.offer(processID);
+            return processID;
         }
+        return -1;
     }
 
     public static ArrayList<OS_Process> convertjobPoolToProcesses() {
@@ -139,6 +148,7 @@ public class Scheduler {
                     int currectPC = Memory_Refactored.getPC(processId);
                     String instruction = Memory_Refactored.getInstruction(processId, currectPC);
                     Parser.parse(instruction);
+                    
                     Memory_Refactored.setPC(processId, currectPC + 1);
 
                     current_time++;
@@ -175,7 +185,7 @@ public class Scheduler {
 
             current_process = RRQueue.poll();
             int processId = current_process.getP_id();
-
+            OS_Process dead_current_process=current_process;
             if (!Memory_Refactored.tryLoadProcess(processId, true)) {
                 System.out.println("Error: Not enough memory to load process " + processId);
                 return;
@@ -185,6 +195,9 @@ public class Scheduler {
             int execution_time = Math.min(time_quantum, current_process.getBurst_time() - current_process.getExecuted_time());
 
             for (int i = 0; i < execution_time; i++) {
+                if(current_process.getBlocked()==true) {
+                    break;
+                }
                 Memory_Refactored.printProcess(processId);
                 System.out.println("Process " + current_process.getP_id() + " is running at time " + current_time);
 
@@ -192,7 +205,7 @@ public class Scheduler {
                 String instruction = Memory_Refactored.getInstruction(processId, currectPC);
                 Parser.parse(instruction);
                 Memory_Refactored.setPC(processId, currectPC + 1);
-                
+    
                 current_time++;
                 current_process.set_Executed_time(current_process.getExecuted_time() + 1);
                 if(!processes.isEmpty() && processes.get(0).getArrival_time() <= current_time) {
@@ -200,6 +213,9 @@ public class Scheduler {
                     readyQueue.offer(processes.get(0).getP_id());
                     processes.remove(0);
                 }
+            }
+            if(current_process.getBlocked()==true)  {
+                continue;
             }
             if(current_process.getExecuted_time() < current_process.getBurst_time()) {
                 RRQueue.offer(current_process);

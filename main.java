@@ -2,13 +2,13 @@ import java.util.*;
 
 import src.*;
 
-public class Main {
+public class main {
     public static void main(String[] args) {
         Init(args);
 
         ArrayList<OS_Process> processes = Scheduler.convertjobPoolToProcesses();
 
-        Scheduler.simulate_HRRN(processes);
+        Scheduler.simulate_RR(processes, 2);
     }
 
     public static void Init(String[] args) {
