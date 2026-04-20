@@ -81,40 +81,6 @@ public class Parser {
         }
     }
 
-    private static void print(String[] args) throws IllegalArgumentException {
-        if (args.length < 1) {
-            throw new IllegalArgumentException("usage: print <message> || print <variable> || print input || print readFile <filePath>");
-        }
-
-        if (args[0].startsWith("\"") && args[0].endsWith("\"")) {
-
-            String message = args[0].substring(1, args[0].length() - 1);
-            SystemCalls.print(message);
-
-        } else if (args[0].equals("input")) {
-            
-            String input = SystemCalls.input();
-
-            SystemCalls.print(input);
-
-        } else if (args[0].equals("readFile")) {
-            
-            if (args.length < 2) {
-                throw new IllegalArgumentException("usage: print readFile <filePath>");
-            }
-
-            String fileContent = SystemCalls.readFile(args[1]);
-
-            SystemCalls.print(fileContent);
-
-        } else {
-
-            String value = SystemCalls.readFromMemory(args[0]);
-            SystemCalls.print(value);
-
-        }
-    }
-
     private static void assign(String[] args) throws IllegalArgumentException {
         if (args.length < 2) {
             throw new IllegalArgumentException("usage: assign <variable> <value> || assign <variable> input || assign <variable> readFile <filePath> || assign <variable1> <variable2>");
@@ -151,28 +117,64 @@ public class Parser {
         }
     }
 
+    private static void print(String[] args) throws IllegalArgumentException {
+        if (args.length < 1) {
+            throw new IllegalArgumentException("usage: print <message> || print <variable> || print input || print readFile <filePath>");
+        }
+
+        if (args[0].startsWith("\"") && args[0].endsWith("\"")) {
+
+            String message = args[0].substring(1, args[0].length() - 1);
+            SystemCalls.print(message);
+
+        } else if (args[0].equals("input")) {
+
+            String input = SystemCalls.input();
+            SystemCalls.print(input);
+
+        } else if (args[0].equals("readFile")) {
+
+            if (args.length < 2) {
+                throw new IllegalArgumentException("usage: print readFile <filePath>");
+            }
+
+            // Fix: resolve args[1] as a variable name, consistent with how assign readFile works
+            String fileContent = SystemCalls.readFile(SystemCalls.readFromMemory(args[1]));
+            SystemCalls.print(fileContent);
+
+        } else {
+
+            String value = SystemCalls.readFromMemory(args[0]);
+            SystemCalls.print(value);
+
+        }
+    }
+
     private static void writeFile(String[] args) throws IllegalArgumentException {
         if (args.length < 2) {
             throw new IllegalArgumentException("usage: writeFile <filePath> <content>");
         }
 
+        // Fix: args[0] (the file path) must also support quoted string literals,
+        // not just variable lookups, matching the same pattern used for args[1].
+        String filePath = args[0].startsWith("\"") && args[0].endsWith("\"")
+                ? args[0].substring(1, args[0].length() - 1)
+                : SystemCalls.readFromMemory(args[0]);
+
         if (args[1].startsWith("\"") && args[1].endsWith("\"")) {
 
             args[1] = args[1].substring(1, args[1].length() - 1);
-        
-            SystemCalls.writeFile(SystemCalls.readFromMemory(args[0]), args[1]);
+            SystemCalls.writeFile(filePath, args[1]);
 
         } else if (args[1].equals("input")) {
 
             String input = SystemCalls.input();
-
-            SystemCalls.writeFile(SystemCalls.readFromMemory(args[0]), input);
+            SystemCalls.writeFile(filePath, input);
 
         } else {
-            
+
             String value = SystemCalls.readFromMemory(args[1]);
-            
-            SystemCalls.writeFile(SystemCalls.readFromMemory(args[0]), value);
+            SystemCalls.writeFile(filePath, value);
 
         }
     }

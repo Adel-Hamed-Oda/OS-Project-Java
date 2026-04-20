@@ -308,6 +308,8 @@ public class Scheduler {
                     readyQueue.offer(processes.get(0).getP_id());
                     processes.remove(0);
                     pqIndex = 0;
+
+                    Memory_Refactored.tryLoadProcess(PQs.get(0).peek().getP_id(), false);
                 }
             }
 
@@ -317,10 +319,13 @@ public class Scheduler {
                     (int) Math.pow(2, pqIndex));
 
             for (int i = 0; i < execution_time; i++) {
+                if (!Memory_Refactored.processExistsInMemory(current_process.getP_id())) {
+                    Memory_Refactored.tryLoadProcess(current_process.getP_id(), true);
+                }
+
                 if (current_process.isBlocked() == true) {
                     break;
                 }
-                System.out.println("Process " + current_process.getP_id() + " is running at time " + current_time);
 
                 if (unblockedProcessID != -1) {
                     OS_Process unblockedProcess = getProcess(unblockedProcessID);
@@ -331,6 +336,15 @@ public class Scheduler {
                     }
                     unblockedProcessID = -1;
                 }
+
+                Memory_Refactored.printMemory();
+                System.out.println("Process " + current_process.getP_id() + " is running at time " + current_time);
+
+                int currectPC = Memory_Refactored.getPC(current_process.getP_id());
+                String instruction = Memory_Refactored.getInstruction(current_process.getP_id(), currectPC);
+                Parser.parse(instruction);
+                Memory_Refactored.setPC(current_process.getP_id(), currectPC + 1);
+
                 current_time++;
                 current_process.set_Executed_time(current_process.getExecuted_time() + 1);
                 if (!processes.isEmpty() && processes.get(0).getArrival_time() <= current_time) {
@@ -340,7 +354,6 @@ public class Scheduler {
                 }
             }
             if (current_process.isBlocked() == true) {
-                current_time++;
                 continue;
             }
             if (current_process.getExecuted_time() < current_process.getBurst_time()) {
@@ -351,11 +364,6 @@ public class Scheduler {
             } else {
                 System.out.println("Process " + current_process.getP_id() + " completed at time " + current_time);
             }
-
-            // For testing purposes
-            // System.out.println("Queue state at end of RR iteration (time " + current_time
-            // + "):");
-            // printRRAndReadyQueues(RRQueue);
 
             current_process = null;
         }

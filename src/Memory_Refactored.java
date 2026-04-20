@@ -189,20 +189,30 @@ public class Memory_Refactored {
     public static void loadContext(int processId) throws NotEnoughMemoryException {
         String filename = "Process_" + processId + "_Context.txt";
 
-        try (var reader = new BufferedReader(new FileReader(filename))) {
-            String line;
-            int index = 0;
+        try {
+            // First pass: count lines without consuming the reader we'll use for loading.
+            long lineCount;
+            try (var counter = new BufferedReader(new FileReader(filename))) {
+                lineCount = counter.lines().count();
+            }
 
-            long lineCount = reader.lines().count();
             int lowerBoundary = findFreeSpace((int) lineCount);
             if (lowerBoundary == -1) {
                 throw new NotEnoughMemoryException("Not enough memory to load context for process " + processId);
             }
 
-            while ((line = reader.readLine()) != null) {
-                memory[lowerBoundary + index].fromString(line);
-                index++;
+            // Second pass: actually read and load the lines.
+            int index = 0;
+            try (var reader = new BufferedReader(new FileReader(filename))) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    memory[lowerBoundary + index].fromString(line);
+                    index++;
+                }
             }
+
+            updateProcessBounds(lowerBoundary);
+
         } catch (IOException e) {
             System.out.println("Error reading context file: " + e.getMessage());
         }
@@ -391,6 +401,13 @@ public class Memory_Refactored {
                 freeIndex++;
             }
         }
+
+        // Scan for every process's id cell and update its bounds to reflect the new position.
+        for (int i = 0; i < MEMORY_SIZE; i++) {
+            if (memory[i].type == CellType.PCB && "id".equals(memory[i].name)) {
+                updateProcessBounds(i);
+            }
+        }
     }
 
     public static int findFreeSpace(int requiredSpace) {
@@ -454,6 +471,14 @@ public class Memory_Refactored {
         return freeCount;
     }
 
+    private static void updateProcessBounds(int newStart) {
+        String[] parts = memory[newStart + 3].value.split("-");
+        int oldStart = Integer.parseInt(parts[0]);
+        int oldEnd   = Integer.parseInt(parts[1]);
+        int blockSize = oldEnd - oldStart + 1;
+        memory[newStart + 3].value = newStart + "-" + (newStart + blockSize - 1);
+    }
+
     //#endregion
 }
 
@@ -474,15 +499,20 @@ final class MemoryCell {
 
     @Override
     public String toString() {
-        return String.format("%s %s %s", name, value, type);
+        // Write empty string instead of "null" so fromString can round-trip correctly
+        return String.format("%s,%s,%s",
+            name  == null ? "" : name,
+            value == null ? "" : value,
+            type);
     }
 
     public void fromString(String line) {
-        String[] parts = line.split(",");
+        // Limit to 3 parts so a comma inside a value doesn't break the split
+        String[] parts = line.split(",", 3);
         if (parts.length == 3) {
-            this.name = parts[0];
-            this.value = parts[1];
-            this.type = CellType.valueOf(parts[2]);
+            this.name  = parts[0].isEmpty() ? null : parts[0];
+            this.value = parts[1].isEmpty() ? null : parts[1];
+            this.type  = CellType.valueOf(parts[2]);
         }
     }
 }
