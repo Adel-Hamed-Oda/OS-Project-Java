@@ -6,7 +6,7 @@ public class OS_Process {
     private final int burst_time;
     private int executed_time;
     private boolean is_in_ready_queue;
-    private boolean blocked;
+    private boolean is_blocked;
 
     public OS_Process(int p_id, int arrival_time, int burst_time) {
         this.p_id = p_id;
@@ -14,19 +14,19 @@ public class OS_Process {
         this.burst_time = burst_time;
         this.executed_time = 0;
         this.is_in_ready_queue = false;
-        this.blocked=false;
+        this.is_blocked = false;
     }
 
     public int getP_id() {
         return p_id;
     }
 
-    public boolean getBlocked() {
-        return blocked;
+    public boolean isBlocked() {
+        return is_blocked;
     }
 
     public void setBlocked(boolean b) {
-        this.blocked=b;
+        this.is_blocked = b;
     }
 
     public int getArrival_time() {
