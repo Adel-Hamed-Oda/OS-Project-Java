@@ -7,7 +7,14 @@ public class main {
 
         ArrayList<OS_Process> processes = Scheduler.convertjobPoolToProcesses();
 
-        Scheduler.simulate_RR(processes, 2);
+        Scheduler.allProcesses.addAll(processes);
+        Scheduler.simulate_MLFQ(processes);
+        // Scheduler.simulate_HRRN(processes);
+        // System.out.println(Scheduler.allProcesses.toString());
+        // for(int i=0 ; i<Scheduler.allProcesses.size(); i++) {
+        //     OS_Process p = Scheduler.allProcesses.get(i);
+        //     System.out.println("Process " + p.getP_id() + ": Arrival Time = " + p.getArrival_time() + ", Burst Time = " + p.getBurst_time() + ", Executed Time = " + p.getExecuted_time());
+        // }
     }
 
     public static void Init(String[] args) {
