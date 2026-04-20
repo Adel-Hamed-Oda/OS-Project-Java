@@ -169,25 +169,25 @@ public class Scheduler {
         while (!processes.isEmpty()) {
             updateReadyQueue(processes);
             int index = get_HRRN(processes);
-            // int processId = processes.get(index).getP_id();
+            int processId = processes.get(index).getP_id();
             if (index != -1) {
-                // if (!Memory_Refactored.tryLoadProcess(processId, false)) {
-                // System.out.println("Error: Not enough memory to load process " + processId);
-                // return;
-                // }
+                if (!Memory_Refactored.tryLoadProcess(processId, false)) {
+                    System.out.println("Error: Not enough memory to load process " + processId);
+                    return;
+                }
 
                 current_process = processes.get(index);
                 updateReadyQueue(processes);
 
                 for (int i = 0; i < current_process.getBurst_time(); i++) {
-                    // Memory_Refactored.printProcess(processId);
+                    Memory_Refactored.printProcess(processId);
                     System.out.println("Process " + current_process.getP_id() + " is running at time " + current_time);
 
-                    // int currectPC = Memory_Refactored.getPC(processId);
-                    // String instruction = Memory_Refactored.getInstruction(processId, currectPC);
-                    // Parser.parse(instruction);
+                    int currectPC = Memory_Refactored.getPC(processId);
+                    String instruction = Memory_Refactored.getInstruction(processId, currectPC);
+                    Parser.parse(instruction);
 
-                    // Memory_Refactored.setPC(processId, currectPC + 1);
+                    Memory_Refactored.setPC(processId, currectPC + 1);
 
                     current_time++;
                 }
@@ -210,11 +210,6 @@ public class Scheduler {
         Queue<OS_Process> RRQueue = new LinkedList<>();
 
         while (!processes.isEmpty() || !RRQueue.isEmpty()) {
-            // For testing purposes
-            // System.out.println("Queue state at start of RR iteration (time " +
-            // current_time + "):");
-            // printRRAndReadyQueues(RRQueue);
-
             if (RRQueue.isEmpty()) {
                 if (processes.get(0).getArrival_time() > current_time) {
                     current_time++;
@@ -223,45 +218,33 @@ public class Scheduler {
                     RRQueue.offer(processes.get(0));
                     readyQueue.offer(processes.get(0).getP_id());
                     processes.remove(0);
+
+                    Memory_Refactored.tryLoadProcess(RRQueue.peek().getP_id(), false);
                 }
             }
 
             current_process = RRQueue.poll();
-            // int processId = current_process.getP_id();
-            // OS_Process dead_current_process=current_process;
-            // if (!Memory_Refactored.tryLoadProcess(processId, true)) {
-            // System.out.println("Error: Not enough memory to load process " + processId);
-            // return;
-            // }
 
             readyQueue.remove(current_process.getP_id());
             int execution_time = Math.min(time_quantum,
                     current_process.getBurst_time() - current_process.getExecuted_time());
 
-            // For testing purposes
-            // if (current_time == 2) {
-            // System.out.println("Blocking process " + current_process.getP_id() + " on
-            // input at time " + current_time);
-            // blockProcessOnInput();
-            // }
-
-            // if (current_time == 5) {
-            // unblockProcessOnInput();
-            // System.out.println("Unblocking process " + unblockedProcessID + " from input
-            // at time " + current_time);
-            // }
-
             for (int i = 0; i < execution_time; i++) {
+                if (!Memory_Refactored.processExistsInMemory(current_process.getP_id())) {
+                    Memory_Refactored.tryLoadProcess(current_process.getP_id(), true);
+                }
+                
                 if (current_process.isBlocked() == true) {
                     break;
                 }
-                // Memory_Refactored.printProcess(processId);
+
+                Memory_Refactored.printMemory();
                 System.out.println("Process " + current_process.getP_id() + " is running at time " + current_time);
 
-                // int currectPC = Memory_Refactored.getPC(processId);
-                // String instruction = Memory_Refactored.getInstruction(processId, currectPC);
-                // Parser.parse(instruction);
-                // Memory_Refactored.setPC(processId, currectPC + 1);
+                int currectPC = Memory_Refactored.getPC(current_process.getP_id());
+                String instruction = Memory_Refactored.getInstruction(current_process.getP_id(), currectPC);
+                Parser.parse(instruction);
+                Memory_Refactored.setPC(current_process.getP_id(), currectPC + 1);
 
                 if (unblockedProcessID != -1) {
                     OS_Process unblockedProcess = getProcess(unblockedProcessID);
@@ -272,6 +255,7 @@ public class Scheduler {
                     }
                     unblockedProcessID = -1;
                 }
+
                 current_time++;
                 current_process.set_Executed_time(current_process.getExecuted_time() + 1);
                 if (!processes.isEmpty() && processes.get(0).getArrival_time() <= current_time) {
@@ -281,7 +265,6 @@ public class Scheduler {
                 }
             }
             if (current_process.isBlocked() == true) {
-                current_time++;
                 continue;
             }
             if (current_process.getExecuted_time() < current_process.getBurst_time()) {
@@ -290,11 +273,6 @@ public class Scheduler {
             } else {
                 System.out.println("Process " + current_process.getP_id() + " completed at time " + current_time);
             }
-
-            // For testing purposes
-            // System.out.println("Queue state at end of RR iteration (time " + current_time
-            // + "):");
-            // printRRAndReadyQueues(RRQueue);
 
             current_process = null;
         }

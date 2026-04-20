@@ -210,7 +210,7 @@ public class Memory_Refactored {
 
     // Improved trySwapOut handles multiple processes, prioritizes victims based on state,
     // and completely discards terminated processes instead of saving them to disk.
-    public static void trySwapOut(int requiredSpace) {
+    public static void swapOut(int requiredSpace) {
         while (getAmountOfFreeSpace() < requiredSpace) {
             int victimId = selectVictimProcess();
 
@@ -271,7 +271,7 @@ public class Memory_Refactored {
             }
         }
 
-        return victimId;
+        return victimId; // Return a random ID that likely doesn't exist to trigger the "no suitable process" case
     }
 
     // Searches memory for a process that matches the specific state name
@@ -332,7 +332,7 @@ public class Memory_Refactored {
             int requiredSpace = ProcessController.getInstructions(processId).length + 7;
             
             // Attempt to swap out an older process to free up space
-            trySwapOut(requiredSpace);
+            swapOut(requiredSpace);
             
             // Try loading/allocating one more time now that (hopefully) space is freed
             try {
@@ -409,6 +409,18 @@ public class Memory_Refactored {
         return -1; // No sufficient free space found
     }
 
+    public static boolean processExistsInMemory(int processId) {
+        for (int i = 0; i < MEMORY_SIZE; i++) {
+            if (memory[i].type == CellType.PCB && 
+                memory[i].name.equals("id") &&
+                memory[i].value.equals(String.valueOf(processId)))
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
     //#endregion
 
     //#region Helper Methods
@@ -440,18 +452,6 @@ public class Memory_Refactored {
             }
         }
         return freeCount;
-    }
-
-    private static boolean processExistsInMemory(int processId) {
-        for (int i = 0; i < MEMORY_SIZE; i++) {
-            if (memory[i].type == CellType.PCB && 
-                memory[i].name.equals("id") &&
-                memory[i].value.equals(String.valueOf(processId)))
-            {
-                return true;
-            }
-        }
-        return false;
     }
 
     //#endregion
