@@ -1,7 +1,7 @@
 import java.util.*;
 import src.*;
 
-public class main {
+public class Main {
     public static void main(String[] args) {
         Init(args);
 
