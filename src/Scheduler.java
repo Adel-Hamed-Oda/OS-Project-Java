@@ -44,6 +44,7 @@ public class Scheduler {
             waitingQueueInput.offer(currentProcessID);
         }
         current_process.setBlocked(true);
+        Memory_Refactored.setProcessState(currentProcessID, ProcessState.Waiting);
     }
 
     public static void blockProcessOnOutput() {
@@ -52,6 +53,7 @@ public class Scheduler {
             waitingQueueOutput.offer(currentProcessID);
         }
         current_process.setBlocked(true);
+        Memory_Refactored.setProcessState(currentProcessID, ProcessState.Waiting);
     }
 
     public static void blockProcessOnMemory() {
@@ -60,6 +62,7 @@ public class Scheduler {
             waitingQueueMemory.offer(currentProcessID);
         }
         current_process.setBlocked(true);
+        Memory_Refactored.setProcessState(currentProcessID, ProcessState.Waiting);
     }
 
     public static int unblockProcessOnInput() {
@@ -158,6 +161,7 @@ public class Scheduler {
                     && process != current_process) {
                 readyQueue.offer(process.getP_id());
                 process.set_in_ready_queue(true);
+                Memory_Refactored.setProcessState(process.getP_id(), ProcessState.Ready);
             }
         }
     }
@@ -171,15 +175,20 @@ public class Scheduler {
             int index = get_HRRN(processes);
             int processId = processes.get(index).getP_id();
             if (index != -1) {
+                // This line makes the process NEW after it was ready and in description , we
+                // only need ready.
                 if (!Memory_Refactored.tryLoadProcess(processId, false)) {
                     System.out.println("Error: Not enough memory to load process " + processId);
                     return;
                 }
 
                 current_process = processes.get(index);
-                updateReadyQueue(processes);
+                readyQueue.remove(current_process.getP_id());
+                processes.remove(index);
+                Memory_Refactored.setProcessState(current_process.getP_id(), ProcessState.Running);
 
                 for (int i = 0; i < current_process.getBurst_time(); i++) {
+                    updateReadyQueue(processes);
                     Memory_Refactored.printProcess(processId);
                     System.out.println("Process " + current_process.getP_id() + " is running at time " + current_time);
 
@@ -193,8 +202,7 @@ public class Scheduler {
                 }
 
                 current_process.set_Executed_time(current_process.getBurst_time());
-                readyQueue.remove(current_process.getP_id());
-                processes.remove(index);
+                Memory_Refactored.setProcessState(current_process.getP_id(), ProcessState.Terminated);
 
                 System.out.println("Process " + current_process.getP_id() + " completed at time " + current_time);
                 current_process = null;
@@ -219,13 +227,15 @@ public class Scheduler {
                     readyQueue.offer(processes.get(0).getP_id());
                     processes.remove(0);
 
+                    Memory_Refactored.setProcessState(RRQueue.peek().getP_id(), ProcessState.Ready);
                     Memory_Refactored.tryLoadProcess(RRQueue.peek().getP_id(), false);
                 }
             }
 
             current_process = RRQueue.poll();
-
             readyQueue.remove(current_process.getP_id());
+            Memory_Refactored.setProcessState(current_process.getP_id(), ProcessState.Running);
+
             int execution_time = Math.min(time_quantum,
                     current_process.getBurst_time() - current_process.getExecuted_time());
 
@@ -233,7 +243,7 @@ public class Scheduler {
                 if (!Memory_Refactored.processExistsInMemory(current_process.getP_id())) {
                     Memory_Refactored.tryLoadProcess(current_process.getP_id(), true);
                 }
-                
+
                 if (current_process.isBlocked() == true) {
                     break;
                 }
@@ -252,6 +262,7 @@ public class Scheduler {
                         RRQueue.offer(unblockedProcess);
                         readyQueue.offer(unblockedProcess.getP_id());
                         unblockedProcess.setBlocked(false);
+                        Memory_Refactored.setProcessState(unblockedProcessID, ProcessState.Ready);
                     }
                     unblockedProcessID = -1;
                 }
@@ -261,6 +272,7 @@ public class Scheduler {
                 if (!processes.isEmpty() && processes.get(0).getArrival_time() <= current_time) {
                     RRQueue.offer(processes.get(0));
                     readyQueue.offer(processes.get(0).getP_id());
+                    Memory_Refactored.setProcessState(processes.get(0).getP_id(), ProcessState.Ready);
                     processes.remove(0);
                 }
             }
@@ -270,8 +282,10 @@ public class Scheduler {
             if (current_process.getExecuted_time() < current_process.getBurst_time()) {
                 RRQueue.offer(current_process);
                 readyQueue.offer(current_process.getP_id());
+                Memory_Refactored.setProcessState(current_process.getP_id(), ProcessState.Ready);
             } else {
                 System.out.println("Process " + current_process.getP_id() + " completed at time " + current_time);
+                Memory_Refactored.setProcessState(current_process.getP_id(), ProcessState.Terminated);
             }
 
             current_process = null;
@@ -309,12 +323,15 @@ public class Scheduler {
                     processes.remove(0);
                     pqIndex = 0;
 
+                    Memory_Refactored.setProcessState(PQs.get(0).peek().getP_id(), ProcessState.Ready);
                     Memory_Refactored.tryLoadProcess(PQs.get(0).peek().getP_id(), false);
                 }
             }
 
             current_process = PQs.get(pqIndex).poll();
             readyQueue.remove(current_process.getP_id());
+            Memory_Refactored.setProcessState(current_process.getP_id(), ProcessState.Running);
+          
             int execution_time = Math.min(current_process.getBurst_time() - current_process.getExecuted_time(),
                     (int) Math.pow(2, pqIndex));
 
@@ -333,6 +350,7 @@ public class Scheduler {
                         PQs.get(0).offer(unblockedProcess);
                         readyQueue.offer(unblockedProcess.getP_id());
                         unblockedProcess.setBlocked(false);
+                        Memory_Refactored.setProcessState(unblockedProcessID, ProcessState.Ready);
                     }
                     unblockedProcessID = -1;
                 }
@@ -350,6 +368,7 @@ public class Scheduler {
                 if (!processes.isEmpty() && processes.get(0).getArrival_time() <= current_time) {
                     PQs.get(0).offer(processes.get(0));
                     readyQueue.offer(processes.get(0).getP_id());
+                    Memory_Refactored.setProcessState(processes.get(0).getP_id(), ProcessState.Ready);
                     processes.remove(0);
                 }
             }
@@ -357,12 +376,14 @@ public class Scheduler {
                 continue;
             }
             if (current_process.getExecuted_time() < current_process.getBurst_time()) {
-                if(pqIndex<3)
+                if (pqIndex < 3)
                     pqIndex++;
                 PQs.get(pqIndex).offer(current_process);
                 readyQueue.offer(current_process.getP_id());
+                Memory_Refactored.setProcessState(current_process.getP_id(), ProcessState.Ready);
             } else {
                 System.out.println("Process " + current_process.getP_id() + " completed at time " + current_time);
+                Memory_Refactored.setProcessState(current_process.getP_id(), ProcessState.Terminated);
             }
 
             current_process = null;

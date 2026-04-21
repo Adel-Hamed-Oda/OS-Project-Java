@@ -8,8 +8,8 @@ public class main {
         ArrayList<OS_Process> processes = Scheduler.convertjobPoolToProcesses();
 
         Scheduler.allProcesses.addAll(processes);
-        Scheduler.simulate_MLFQ(processes); // time quantum of 2
-        // Scheduler.simulate_HRRN(processes);
+        // Scheduler.simulate_MLFQ(processes); // time quantum of 2
+        Scheduler.simulate_HRRN(processes);
         // System.out.println(Scheduler.allProcesses.toString());
         // for(int i=0 ; i<Scheduler.allProcesses.size(); i++) {
         //     OS_Process p = Scheduler.allProcesses.get(i);
