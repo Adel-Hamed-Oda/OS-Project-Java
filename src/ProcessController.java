@@ -1,10 +1,13 @@
 package src;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.util.ArrayList;
+import java.util.List;
 
 public class ProcessController {
     public static ArrayList<String[]> instructionTable = new ArrayList<>();
@@ -50,5 +53,33 @@ public class ProcessController {
         String contextFileName = "Process_" + processID + "_Context.txt";
         java.io.File contextFile = new java.io.File(contextFileName);
         return contextFile.exists();
+    }
+
+    public static void setProcessState(int processID, ProcessState state) {
+        if (Memory_Refactored.processExistsInMemory(processID)) {
+            Memory_Refactored.setProcessState(processID, state);
+        } else {
+            if (contextFileExists(processID)) {
+                try {
+                    File contextFile = new File("Process_" + processID + "_Context.txt"); // use however you build the file path
+                    List<String> lines = new ArrayList<>(Files.readAllLines(contextFile.toPath()));
+
+                    for (int i = 0; i < lines.size(); i++) {
+                        // Matches lines like "state: Ready" or "state = Running" etc.
+                        if (lines.get(i).toLowerCase().startsWith("state")) {
+                            lines.set(i, "state," + state.toString() + ",PCB"); // Update the state line with the new state
+                            break;
+                        }
+                    }
+
+                    Files.write(contextFile.toPath(), lines);
+
+                } catch (IOException e) {
+                    System.out.println("Warning: Failed to update state in context file for process " + processID + ": " + e.getMessage());
+                }
+            } else {
+                System.out.println("Warning: Cannot set state to " + state + " for process " + processID + " because it is not in memory.");
+            }
+        }
     }
 }

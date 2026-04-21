@@ -51,8 +51,15 @@ public class Memory_Refactored {
             memory[startIndex + 7 + i].value = instructions[i];
             memory[startIndex + 7 + i].type = CellType.Instruction;
         }
+    }
 
-        printMemory();
+    public static boolean tryAllocateProcess(int processId) {
+        try {
+            allocateProcess(processId);
+            return true;
+        } catch (NotEnoughMemoryException e) {
+            return false;
+        }
     }
 
     public static int getPC(int processId) {
@@ -321,8 +328,11 @@ public class Memory_Refactored {
 
     public static boolean tryLoadProcess(int processId, boolean tryFindingContext) {
         if (processExistsInMemory(processId)) {
+            System.out.println("Process " + processId + " is already in memory. No need to load.");
             return true; // Process is already in memory, no need to load
         }
+
+        System.out.println("Attempting to load Process " + processId + " into memory...");
 
         // Check if we should load an existing context or allocate a new one
         boolean hasContext = tryFindingContext && ProcessController.contextFileExists(processId);
@@ -332,11 +342,13 @@ public class Memory_Refactored {
                 loadContext(processId);
             } else {
                 allocateProcess(processId);
+                System.out.println("Process " + processId + " allocated in memory.");
             }
 
             return true; // Success on the first try
             
         } catch (NotEnoughMemoryException e) {
+            System.out.println("Warning: Not enough memory to allocate process " + processId);
             // Memory is full! Calculate how much space we need to free up.
             // (Instructions length + 3 variables + 4 PCB slots = length + 7)
             int requiredSpace = ProcessController.getInstructions(processId).length + 7;
@@ -350,6 +362,7 @@ public class Memory_Refactored {
                     loadContext(processId);
                 } else {
                     allocateProcess(processId);
+                    System.out.println("Process " + processId + " allocated in memory after swapping.");
                 }
 
                 return true; // Success on the second try

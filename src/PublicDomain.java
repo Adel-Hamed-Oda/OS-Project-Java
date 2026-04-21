@@ -12,4 +12,8 @@ public class PublicDomain {
     );
 
     public static final List<Integer> ARRIVAL_TIMES = Arrays.asList(0, 1, 4);
+
+    public static final String SCHEDULING_TECHNIQUE = "MLFQ"; // Options: "HRRN", "MLFQ", "RR"
+
+    public static final int TIME_QUANTUM = 2; // Only used for Round Robin
 }

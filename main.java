@@ -9,6 +9,15 @@ public class main {
 
         Scheduler.allProcesses.addAll(processes);
         // Scheduler.simulate_MLFQ(processes); // time quantum of 2
+        if (PublicDomain.SCHEDULING_TECHNIQUE.equals("HRRN")) {
+            Scheduler.simulate_HRRN(processes);
+        } else if (PublicDomain.SCHEDULING_TECHNIQUE.equals("MLFQ")) {
+            Scheduler.simulate_MLFQ(processes);
+        } else if (PublicDomain.SCHEDULING_TECHNIQUE.equals("RR")) {
+            Scheduler.simulate_RR(processes, PublicDomain.TIME_QUANTUM);
+        } else {
+            System.out.println("Unknown scheduling technique: " + PublicDomain.SCHEDULING_TECHNIQUE);
+        }
         Scheduler.simulate_HRRN(processes);
         // System.out.println(Scheduler.allProcesses.toString());
         // for(int i=0 ; i<Scheduler.allProcesses.size(); i++) {
