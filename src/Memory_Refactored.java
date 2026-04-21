@@ -29,7 +29,7 @@ public class Memory_Refactored {
         memory[startIndex].type = CellType.PCB;
 
         memory[startIndex + 1].name = "state";
-        memory[startIndex + 1].value = String.valueOf(ProcessState.New);
+        memory[startIndex + 1].value = String.valueOf(ProcessState.Ready);
         memory[startIndex + 1].type = CellType.PCB;
 
         memory[startIndex + 2].name = "pc";
