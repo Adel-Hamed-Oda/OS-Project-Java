@@ -1,4 +1,3 @@
-package src;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -48,18 +47,18 @@ public class SystemCalls {
     }
 
     public static String readFromMemory(String var) {
-        return Memory_Refactored.getVariable(Scheduler.getCurrentProcessID(), var);
+        return Memory.getVariable(Scheduler.getCurrentProcessID(), var);
     }
 
     public static void writeToMemory(String var, String value) {
-        Memory_Refactored.setVariable(Scheduler.getCurrentProcessID(), var, value);
+        Memory.setVariable(Scheduler.getCurrentProcessID(), var, value);
     }
 
     public static void printFromTo(String var1, String var2) {
         int pid = Scheduler.getCurrentProcessID();
         
-        String value1 = Memory_Refactored.getVariable(pid, var1);
-        String value2 = Memory_Refactored.getVariable(pid, var2);
+        String value1 = Memory.getVariable(pid, var1);
+        String value2 = Memory.getVariable(pid, var2);
         
         int num1 = Integer.parseInt(value1);
         int num2 = Integer.parseInt(value2);

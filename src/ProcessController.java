@@ -1,4 +1,3 @@
-package src;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -56,8 +55,8 @@ public class ProcessController {
     }
 
     public static void setProcessState(int processID, ProcessState state) {
-        if (Memory_Refactored.processExistsInMemory(processID)) {
-            Memory_Refactored.setProcessState(processID, state);
+        if (Memory.processExistsInMemory(processID)) {
+            Memory.setProcessState(processID, state);
         } else {
             if (contextFileExists(processID)) {
                 try {

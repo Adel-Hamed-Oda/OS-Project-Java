@@ -1,5 +1,3 @@
-package src;
-
 public class OS_Process {
     private final int p_id;
     private final int arrival_time;

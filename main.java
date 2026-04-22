@@ -1,7 +1,6 @@
 import java.util.*;
-import src.*;
 
-public class Main {
+public class main {
     public static void main(String[] args) {
         Init(args);
 
@@ -18,7 +17,7 @@ public class Main {
         } else {
             System.out.println("Unknown scheduling technique: " + PublicDomain.SCHEDULING_TECHNIQUE);
         }
-        Scheduler.simulate_HRRN(processes);
+        // Scheduler.simulate_HRRN(processes);
         // System.out.println(Scheduler.allProcesses.toString());
         // for(int i=0 ; i<Scheduler.allProcesses.size(); i++) {
         //     OS_Process p = Scheduler.allProcesses.get(i);
