@@ -1,4 +1,3 @@
-package src;
 
 import java.util.ArrayList;
 import java.util.LinkedList;
@@ -21,6 +20,79 @@ public class Scheduler {
     private static int unblockedProcessID = -1;
 
     public static ArrayList<OS_Process> allProcesses = new ArrayList<>();
+
+    public static void initializeSimulation() {
+        readyQueue.clear();
+        waitingQueueInput.clear();
+        waitingQueueOutput.clear();
+        waitingQueueMemory.clear();
+        jobPool.clear();
+        arrival_times.clear();
+        burst_times.clear();
+        allProcesses.clear();
+        current_time = 0;
+        current_process = null;
+        unblockedProcessID = -1;
+
+        ProcessController.instructionTable.clear();
+        Memory.initMemory();
+        MutexManager.InitMutexes();
+        Parser.initParser();
+
+        arrival_times.addAll(PublicDomain.ARRIVAL_TIMES);
+
+        for (String fileName : PublicDomain.FILE_NAMES) {
+            ProcessController.AddNewProcess(fileName);
+            int processID = ProcessController.instructionTable.size() - 1;
+            burst_times.add(ProcessController.getInstructionCount(processID));
+            jobPool.offer(processID);
+        }
+
+        allProcesses.addAll(convertjobPoolToProcesses());
+    }
+
+    public static synchronized Integer getCurrentRunningProcessID() {
+        return current_process == null ? null : current_process.getP_id();
+    }
+
+    public static synchronized int getCurrentTimeSnapshot() {
+        return current_time;
+    }
+
+    public static synchronized List<String> getProcessStateSnapshot() {
+        List<String> snapshot = new ArrayList<>();
+        for (OS_Process process : allProcesses) {
+            String state = inferState(process);
+            String row = "P" + process.getP_id()
+                    + " | " + state
+                    + " | " + process.getExecuted_time() + "/" + process.getBurst_time();
+            snapshot.add(row);
+        }
+        return snapshot;
+    }
+
+    private static String inferState(OS_Process process) {
+        int processID = process.getP_id();
+
+        if (process.getExecuted_time() >= process.getBurst_time()) {
+            return ProcessState.Terminated.name();
+        }
+
+        if (current_process != null && processID == current_process.getP_id()) {
+            return ProcessState.Running.name();
+        }
+
+        if (process.isBlocked() || waitingQueueInput.contains(processID) || waitingQueueOutput.contains(processID)
+                || waitingQueueMemory.contains(processID)) {
+            return ProcessState.Waiting.name();
+        }
+
+        if (readyQueue.contains(processID) || process.getArrival_time() <= current_time) {
+            return ProcessState.Ready.name();
+        }
+
+        return "NotArrived";
+    }
 
     public static int getCurrentProcessID() {
         if (current_process == null) {
@@ -177,7 +249,7 @@ public class Scheduler {
             if (index != -1) {
                 // This line makes the process NEW after it was ready and in description , we
                 // only need ready.
-                if (!Memory_Refactored.tryLoadProcess(processId, false)) {
+                if (!Memory.tryLoadProcess(processId, false)) {
                     System.out.println("Error: Not enough memory to load process " + processId);
                     return;
                 }
@@ -189,14 +261,14 @@ public class Scheduler {
 
                 for (int i = 0; i < current_process.getBurst_time(); i++) {
                     updateReadyQueue(processes);
-                    Memory_Refactored.printProcess(processId);
+                    Memory.printProcess(processId);
                     System.out.println("Process " + current_process.getP_id() + " is running at time " + current_time);
 
-                    int currectPC = Memory_Refactored.getPC(processId);
-                    String instruction = Memory_Refactored.getInstruction(processId, currectPC);
+                    int currectPC = Memory.getPC(processId);
+                    String instruction = Memory.getInstruction(processId, currectPC);
                     Parser.parse(instruction);
 
-                    Memory_Refactored.setPC(processId, currectPC + 1);
+                    Memory.setPC(processId, currectPC + 1);
 
                     current_time++;
                 }
@@ -226,8 +298,9 @@ public class Scheduler {
                     RRQueue.offer(processes.get(0));
                     readyQueue.offer(processes.get(0).getP_id());
 
-                    if (!Memory_Refactored.tryLoadProcess(processes.get(0).getP_id(), false)) {
-                        System.out.println("Error: For some reason I couldn't load process " + processes.get(0).getP_id());
+                    if (!Memory.tryLoadProcess(processes.get(0).getP_id(), false)) {
+                        System.out.println(
+                                "Error: For some reason I couldn't load process " + processes.get(0).getP_id());
                     }
 
                     processes.remove(0);
@@ -245,19 +318,20 @@ public class Scheduler {
                 if (current_process.isBlocked() == true) {
                     break;
                 }
-                
-                if (!Memory_Refactored.processExistsInMemory(current_process.getP_id())) {
-                    Memory_Refactored.tryLoadProcess(current_process.getP_id(), true);
+
+                if (!Memory.processExistsInMemory(current_process.getP_id())) {
+                    Memory.tryLoadProcess(current_process.getP_id(), true);
                 }
 
-                Memory_Refactored.printMemory();
+                Memory.printMemory();
 
-                int currectPC = Memory_Refactored.getPC(current_process.getP_id());
-                String instruction = Memory_Refactored.getInstruction(current_process.getP_id(), currectPC);
-                System.out.println("Process " + current_process.getP_id() + " is running at time " + current_time + " executing instruction: " + instruction);
+                int currectPC = Memory.getPC(current_process.getP_id());
+                String instruction = Memory.getInstruction(current_process.getP_id(), currectPC);
+                System.out.println("Process " + current_process.getP_id() + " is running at time " + current_time
+                        + " executing instruction: " + instruction);
 
                 Parser.parse(instruction);
-                Memory_Refactored.setPC(current_process.getP_id(), currectPC + 1);
+                Memory.setPC(current_process.getP_id(), currectPC + 1);
 
                 if (unblockedProcessID != -1) {
                     OS_Process unblockedProcess = getProcess(unblockedProcessID);
@@ -275,7 +349,7 @@ public class Scheduler {
                 if (!processes.isEmpty() && processes.get(0).getArrival_time() <= current_time) {
                     RRQueue.offer(processes.get(0));
                     readyQueue.offer(processes.get(0).getP_id());
-                    Memory_Refactored.tryLoadProcess(processes.get(0).getP_id(), false);
+                    Memory.tryLoadProcess(processes.get(0).getP_id(), false);
                     processes.remove(0);
                 }
             }
@@ -325,8 +399,9 @@ public class Scheduler {
                     readyQueue.offer(processes.get(0).getP_id());
                     pqIndex = 0;
 
-                    if (!Memory_Refactored.tryLoadProcess(processes.get(0).getP_id(), false)) {
-                        System.out.println("Error: For some reason I couldn't load process " + processes.get(0).getP_id());
+                    if (!Memory.tryLoadProcess(processes.get(0).getP_id(), false)) {
+                        System.out.println(
+                                "Error: For some reason I couldn't load process " + processes.get(0).getP_id());
                     }
 
                     processes.remove(0);
@@ -335,8 +410,8 @@ public class Scheduler {
 
             current_process = PQs.get(pqIndex).poll();
             readyQueue.remove(current_process.getP_id());
-                        ProcessController.setProcessState(current_process.getP_id(), ProcessState.Running);
-          
+            ProcessController.setProcessState(current_process.getP_id(), ProcessState.Running);
+
             int execution_time = Math.min(current_process.getBurst_time() - current_process.getExecuted_time(),
                     (int) Math.pow(2, pqIndex));
 
@@ -344,20 +419,20 @@ public class Scheduler {
                 if (current_process.isBlocked() == true) {
                     break;
                 }
-                
-                if (!Memory_Refactored.processExistsInMemory(current_process.getP_id())) {
-                    Memory_Refactored.tryLoadProcess(current_process.getP_id(), true);
+
+                if (!Memory.processExistsInMemory(current_process.getP_id())) {
+                    Memory.tryLoadProcess(current_process.getP_id(), true);
                 }
 
-                
-                Memory_Refactored.printMemory();
+                Memory.printMemory();
 
-                int currectPC = Memory_Refactored.getPC(current_process.getP_id());
-                String instruction = Memory_Refactored.getInstruction(current_process.getP_id(), currectPC);
-                System.out.println("Process " + current_process.getP_id() + " is running at time " + current_time + " executing instruction: " + instruction);
+                int currectPC = Memory.getPC(current_process.getP_id());
+                String instruction = Memory.getInstruction(current_process.getP_id(), currectPC);
+                System.out.println("Process " + current_process.getP_id() + " is running at time " + current_time
+                        + " executing instruction: " + instruction);
 
                 Parser.parse(instruction);
-                Memory_Refactored.setPC(current_process.getP_id(), currectPC + 1);
+                Memory.setPC(current_process.getP_id(), currectPC + 1);
 
                 if (unblockedProcessID != -1) {
                     OS_Process unblockedProcess = getProcess(unblockedProcessID);
@@ -375,7 +450,7 @@ public class Scheduler {
                 if (!processes.isEmpty() && processes.get(0).getArrival_time() <= current_time) {
                     PQs.get(0).offer(processes.get(0));
                     readyQueue.offer(processes.get(0).getP_id());
-                    Memory_Refactored.tryLoadProcess(processes.get(0).getP_id(), false);
+                    Memory.tryLoadProcess(processes.get(0).getP_id(), false);
                     processes.remove(0);
                 }
             }

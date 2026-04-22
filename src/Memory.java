@@ -1,8 +1,8 @@
-package src;
-
 import java.io.*;
+import java.util.ArrayList;
+import java.util.List;
 
-public class Memory_Refactored {
+public class Memory {
     private static final int MEMORY_SIZE = 40;
     private static MemoryCell[] memory;
 
@@ -397,6 +397,20 @@ public class Memory_Refactored {
             System.out.println(prefix + "Address " + i + ": " + memory[i]);
         }
         System.out.println("=================================================================");
+    }
+
+    public static synchronized List<String> getMemorySnapshot() {
+        List<String> snapshot = new ArrayList<>();
+
+        if (memory == null) {
+            return snapshot;
+        }
+
+        for (int i = 0; i < MEMORY_SIZE; i++) {
+            snapshot.add("Address " + i + ": " + memory[i]);
+        }
+
+        return snapshot;
     }
 
     public static void compactMemory() {

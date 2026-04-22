@@ -1,5 +1,3 @@
-package src;
-
 public class MutexManager {
   	private static int userInput, userOutput, File ;
 	

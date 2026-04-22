@@ -1,0 +1,13 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "java",
+      "name": "Dashboard (JavaFX)",
+      "request": "launch",
+      "mainClass": "Dashboard",
+      "projectName": "OS-Project-Java_3c2a9ed2",
+      "vmArgs": "--module-path \"C:\\JavaFX\\javafx-sdk-17.0.15\\lib\" --add-modules javafx.controls,javafx.graphics"
+    }
+  ]
+}

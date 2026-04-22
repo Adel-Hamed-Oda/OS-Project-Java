@@ -1,0 +1,11 @@
+{
+    "java.project.referencedLibraries": [
+        "lib/**/*.jar",
+        "C:/JavaFX/javafx-sdk-17.0.15/lib/*.jar"
+    ],
+    "javafx.home": "C:/JavaFX/javafx-sdk-17.0.15/lib",
+    "java.jdt.ls.vmargs": "--add-modules=ALL-MODULE-PATH",
+    "java.project.sourcePaths": [
+        "src"
+    ]
+}
