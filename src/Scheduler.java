@@ -5,6 +5,10 @@ import java.util.List;
 import java.util.Queue;
 
 public class Scheduler {
+    private static final Object STEP_LOCK = new Object();
+    private static boolean stepModeEnabled = false;
+    private static boolean autoRunEnabled = false;
+    private static int pendingStepCount = 0;
 
     public static Queue<Integer> readyQueue = new LinkedList<>(); // should things from the waiting queue return to the
                                                                   // beginning or the end of the queue?
@@ -33,6 +37,7 @@ public class Scheduler {
         current_time = 0;
         current_process = null;
         unblockedProcessID = -1;
+        disableStepMode();
 
         ProcessController.instructionTable.clear();
         Memory.initMemory();
@@ -49,6 +54,83 @@ public class Scheduler {
         }
 
         allProcesses.addAll(convertjobPoolToProcesses());
+    }
+
+    public static void enableStepMode() {
+        synchronized (STEP_LOCK) {
+            stepModeEnabled = true;
+            autoRunEnabled = false;
+            pendingStepCount = 0;
+        }
+    }
+
+    public static void disableStepMode() {
+        synchronized (STEP_LOCK) {
+            stepModeEnabled = false;
+            autoRunEnabled = false;
+            pendingStepCount = 0;
+            STEP_LOCK.notifyAll();
+        }
+    }
+
+    public static void setAutoRun(boolean enabled) {
+        synchronized (STEP_LOCK) {
+            if (!stepModeEnabled) {
+                autoRunEnabled = false;
+                return;
+            }
+
+            autoRunEnabled = enabled;
+            STEP_LOCK.notifyAll();
+        }
+    }
+
+    public static boolean isAutoRunEnabled() {
+        synchronized (STEP_LOCK) {
+            return stepModeEnabled && autoRunEnabled;
+        }
+    }
+
+    public static void requestStep() {
+        synchronized (STEP_LOCK) {
+            if (!stepModeEnabled) {
+                return;
+            }
+            pendingStepCount++;
+            STEP_LOCK.notifyAll();
+        }
+    }
+
+    private static void waitForStepIfEnabled() {
+        synchronized (STEP_LOCK) {
+            while (stepModeEnabled) {
+                if (autoRunEnabled) {
+                    try {
+                        STEP_LOCK.wait(2000);
+                    } catch (InterruptedException ex) {
+                        Thread.currentThread().interrupt();
+                        return;
+                    }
+
+                    if (autoRunEnabled) {
+                        return;
+                    }
+                    continue;
+                }
+
+                if (pendingStepCount > 0) {
+                    pendingStepCount--;
+                    return;
+                }
+
+                try {
+                    STEP_LOCK.wait();
+                } catch (InterruptedException ex) {
+                    Thread.currentThread().interrupt();
+                    return;
+                }
+            }
+        }
     }
 
     public static synchronized Integer getCurrentRunningProcessID() {
@@ -69,6 +151,42 @@ public class Scheduler {
             snapshot.add(row);
         }
         return snapshot;
+    }
+
+    public static synchronized List<String> getReadyQueueSnapshot() {
+        List<String> snapshot = new ArrayList<>();
+        for (Integer processID : readyQueue) {
+            snapshot.add("P" + processID);
+        }
+
+        if (snapshot.isEmpty()) {
+            snapshot.add("(empty)");
+        }
+
+        return snapshot;
+    }
+
+    public static synchronized List<String> getBlockedQueueSnapshot() {
+        List<String> snapshot = new ArrayList<>();
+        snapshot.add("Input: " + formatQueue(waitingQueueInput));
+        snapshot.add("Output: " + formatQueue(waitingQueueOutput));
+        snapshot.add("Memory: " + formatQueue(waitingQueueMemory));
+        return snapshot;
+    }
+
+    private static String formatQueue(Queue<Integer> queue) {
+        if (queue.isEmpty()) {
+            return "(empty)";
+        }
+
+        StringBuilder builder = new StringBuilder();
+        for (Integer processID : queue) {
+            if (builder.length() > 0) {
+                builder.append(", ");
+            }
+            builder.append("P").append(processID);
+        }
+        return builder.toString();
     }
 
     private static String inferState(OS_Process process) {
@@ -260,6 +378,7 @@ public class Scheduler {
                 ProcessController.setProcessState(current_process.getP_id(), ProcessState.Running);
 
                 for (int i = 0; i < current_process.getBurst_time(); i++) {
+                    waitForStepIfEnabled();
                     updateReadyQueue(processes);
                     Memory.printProcess(processId);
                     System.out.println("Process " + current_process.getP_id() + " is running at time " + current_time);
@@ -279,6 +398,7 @@ public class Scheduler {
                 System.out.println("Process " + current_process.getP_id() + " completed at time " + current_time);
                 current_process = null;
             } else {
+                waitForStepIfEnabled();
                 current_time++;
             }
         }
@@ -292,6 +412,7 @@ public class Scheduler {
         while (!processes.isEmpty() || !RRQueue.isEmpty()) {
             if (RRQueue.isEmpty()) {
                 if (processes.get(0).getArrival_time() > current_time) {
+                    waitForStepIfEnabled();
                     current_time++;
                     continue;
                 } else {
@@ -318,6 +439,8 @@ public class Scheduler {
                 if (current_process.isBlocked() == true) {
                     break;
                 }
+
+                waitForStepIfEnabled();
 
                 if (!Memory.processExistsInMemory(current_process.getP_id())) {
                     Memory.tryLoadProcess(current_process.getP_id(), true);
@@ -392,6 +515,7 @@ public class Scheduler {
             int pqIndex = getPQIndex(PQs);
             if (pqIndex == -1) {
                 if (processes.get(0).getArrival_time() > current_time) {
+                    waitForStepIfEnabled();
                     current_time++;
                     continue;
                 } else {
@@ -419,6 +543,8 @@ public class Scheduler {
                 if (current_process.isBlocked() == true) {
                     break;
                 }
+
+                waitForStepIfEnabled();
 
                 if (!Memory.processExistsInMemory(current_process.getP_id())) {
                     Memory.tryLoadProcess(current_process.getP_id(), true);
