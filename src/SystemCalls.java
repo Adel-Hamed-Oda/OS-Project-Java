@@ -4,9 +4,14 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.util.Scanner;
+import java.util.concurrent.LinkedBlockingQueue;
 
 public class SystemCalls {
+    private static final Object INPUT_LOCK = new Object();
+    private static final LinkedBlockingQueue<String> GUI_INPUT_QUEUE = new LinkedBlockingQueue<>();
+    private static volatile boolean awaitingInput = false;
+    private static volatile Integer awaitingInputProcessID = null;
+
     public static String readFile(String fileName)  {
         StringBuilder content = new StringBuilder();
         try {
@@ -40,10 +45,39 @@ public class SystemCalls {
     }
 
     public static String input() {
-        @SuppressWarnings("resource") // I added this because I hate the yellow lines, ignore it
+        synchronized (INPUT_LOCK) {
+            awaitingInput = true;
+            awaitingInputProcessID = Scheduler.getCurrentProcessID();
+            GUI_INPUT_QUEUE.clear();
+        }
 
-        Scanner sc = new Scanner(System.in);
-        return sc.nextLine();
+        try {
+            return GUI_INPUT_QUEUE.take();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return "";
+        } finally {
+            synchronized (INPUT_LOCK) {
+                awaitingInput = false;
+                awaitingInputProcessID = null;
+            }
+        }
+    }
+
+    public static boolean isAwaitingInput() {
+        return awaitingInput;
+    }
+
+    public static Integer getAwaitingInputProcessID() {
+        return awaitingInputProcessID;
+    }
+
+    public static boolean provideInput(String inputValue) {
+        if (!awaitingInput) {
+            return false;
+        }
+        GUI_INPUT_QUEUE.offer(inputValue == null ? "" : inputValue);
+        return true;
     }
 
     public static String readFromMemory(String var) {
