@@ -165,8 +165,6 @@ public class Memory {
     }
 
     public static void saveContext(int processId) {
-        String filename = "Process_" + processId + "_Context.txt";
-
         int[] bounds = findProcessBounds(processId);
         int lowerBoundary = bounds[0];
         int upperBoundary = bounds[1];
@@ -176,53 +174,33 @@ public class Memory {
             return;
         }
 
-        File file = new File(filename);
-        if (PublicDomain.REMOVE_FILES_AFTER_EXECUTION) {
-            file.deleteOnExit();
+        String[] lines = new String[upperBoundary - lowerBoundary + 1];
+        for (int i = lowerBoundary; i <= upperBoundary; i++) {
+            lines[i - lowerBoundary] = memory[i].toString();
+            memory[i].clear(); // Free memory
         }
 
-        try (BufferedWriter writer = new BufferedWriter(new FileWriter(file))) {
-            for (int i = lowerBoundary; i <= upperBoundary; i++) {
-                writer.append(memory[i] + "\n");
-                memory[i].clear(); // Free memory
-            }
-        } catch (IOException e) {
-            System.out.println("Error creating context file: " + e.getMessage());
-        }
-
+        ProcessController.saveContext(processId, lines);
         compactMemory();
     }
 
     public static void loadContext(int processId) throws NotEnoughMemoryException {
-        String filename = "Process_" + processId + "_Context.txt";
-
-        try {
-            // First pass: count lines without consuming the reader we'll use for loading.
-            long lineCount;
-            try (var counter = new BufferedReader(new FileReader(filename))) {
-                lineCount = counter.lines().count();
-            }
-
-            int lowerBoundary = findFreeSpace((int) lineCount);
-            if (lowerBoundary == -1) {
-                throw new NotEnoughMemoryException("Not enough memory to load context for process " + processId);
-            }
-
-            // Second pass: actually read and load the lines.
-            int index = 0;
-            try (var reader = new BufferedReader(new FileReader(filename))) {
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    memory[lowerBoundary + index].fromString(line);
-                    index++;
-                }
-            }
-
-            updateProcessBounds(lowerBoundary);
-
-        } catch (IOException e) {
-            System.out.println("Error reading context file: " + e.getMessage());
+        String[] lines = ProcessController.loadContext(processId);
+        if (lines == null || lines.length == 0) {
+            System.out.println("No context found for Process " + processId);
+            return;
         }
+
+        int lowerBoundary = findFreeSpace(lines.length);
+        if (lowerBoundary == -1) {
+            throw new NotEnoughMemoryException("Not enough memory to load context for process " + processId);
+        }
+
+        for (int i = lowerBoundary; i < lowerBoundary + lines.length; i++) {
+            memory[i].fromString(lines[i - lowerBoundary]);
+        }
+
+        updateProcessBounds(lowerBoundary);
     }
 
     // Improved trySwapOut handles multiple processes, prioritizes victims based on state,
@@ -335,7 +313,7 @@ public class Memory {
         System.out.println("Attempting to load Process " + processId + " into memory...");
 
         // Check if we should load an existing context or allocate a new one
-        boolean hasContext = tryFindingContext && ProcessController.contextFileExists(processId);
+        boolean hasContext = tryFindingContext && ProcessController.contextExists(processId);
 
         try {
             if (hasContext) {
