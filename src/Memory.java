@@ -24,19 +24,19 @@ public class Memory {
             throw new NotEnoughMemoryException("Not enough memory to allocate process " + processId);
         }
 
-        memory[startIndex].name = "id";
+        memory[startIndex].name = "ID";
         memory[startIndex].value = String.valueOf(processId);
         memory[startIndex].type = CellType.PCB;
 
-        memory[startIndex + 1].name = "state";
+        memory[startIndex + 1].name = "State";
         memory[startIndex + 1].value = String.valueOf(ProcessState.Ready);
         memory[startIndex + 1].type = CellType.PCB;
 
-        memory[startIndex + 2].name = "pc";
+        memory[startIndex + 2].name = "PC";
         memory[startIndex + 2].value = String.valueOf(0);
         memory[startIndex + 2].type = CellType.PCB;
 
-        memory[startIndex + 3].name = "bounds";
+        memory[startIndex + 3].name = "Bounds";
         memory[startIndex + 3].value = startIndex + "-" + (startIndex + requiredSpace - 1);
         memory[startIndex + 3].type = CellType.PCB;
 
@@ -278,7 +278,7 @@ public class Memory {
         // Fallback: Just grab the first process we can find that isn't currently "Running"
         if (victimId == -1) {
             for (int i = 0; i < MEMORY_SIZE; i++) {
-                if (memory[i].type == CellType.PCB && "id".equals(memory[i].name)) {
+                if (memory[i].type == CellType.PCB && isPCBIdField(memory[i].name)) {
                     int processId = Integer.parseInt(memory[i].value);
                     ProcessState state = getProcessState(processId);
                     if (state != null && !state.name().equals("Running")) {
@@ -294,7 +294,7 @@ public class Memory {
     // Searches memory for a process that matches the specific state name
     private static int findProcessByState(String targetStateName) {
         for (int i = 0; i < MEMORY_SIZE; i++) {
-            if (memory[i].type == CellType.PCB && "id".equals(memory[i].name)) {
+            if (memory[i].type == CellType.PCB && isPCBIdField(memory[i].name)) {
                 int processId = Integer.parseInt(memory[i].value);
                 ProcessState state = getProcessState(processId);
                 
@@ -431,7 +431,7 @@ public class Memory {
 
         // Scan for every process's id cell and update its bounds to reflect the new position.
         for (int i = 0; i < MEMORY_SIZE; i++) {
-            if (memory[i].type == CellType.PCB && "id".equals(memory[i].name)) {
+            if (memory[i].type == CellType.PCB && isPCBIdField(memory[i].name)) {
                 updateProcessBounds(i);
             }
         }
@@ -456,7 +456,7 @@ public class Memory {
     public static boolean processExistsInMemory(int processId) {
         for (int i = 0; i < MEMORY_SIZE; i++) {
             if (memory[i].type == CellType.PCB && 
-                memory[i].name.equals("id") &&
+                isPCBIdField(memory[i].name) &&
                 memory[i].value.equals(String.valueOf(processId)))
             {
                 return true;
@@ -475,7 +475,7 @@ public class Memory {
 
         for (int i = 0; i < MEMORY_SIZE; i++) {
             if (memory[i].type == CellType.PCB && 
-                memory[i].name.equals("id") &&
+                isPCBIdField(memory[i].name) &&
                 memory[i].value.equals(String.valueOf(processId)))
             {
                 lowerBoundary = memory[i + 3].value != null ? Integer.parseInt(memory[i + 3].value.split("-")[0]) : -1;
@@ -496,6 +496,10 @@ public class Memory {
             }
         }
         return freeCount;
+    }
+
+    private static boolean isPCBIdField(String name) {
+        return name != null && name.equalsIgnoreCase("id");
     }
 
     private static void updateProcessBounds(int newStart) {
