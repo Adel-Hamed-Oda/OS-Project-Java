@@ -1,0 +1,14 @@
+id,1,PCB
+state,Running,PCB
+pc,1,PCB
+bounds,14-27,PCB
+,,Variable
+,,Variable
+,,Variable
+,semWait userInput,Instruction
+,assign a input,Instruction
+,assign b input,Instruction
+,semSignal userInput,Instruction
+,semWait file,Instruction
+,writeFile a b,Instruction
+,semSignal file,Instruction

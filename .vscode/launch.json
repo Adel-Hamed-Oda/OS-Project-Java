@@ -3,12 +3,25 @@
   "configurations": [
     {
       "type": "java",
+      "name": "Dashboard",
+      "request": "launch",
+      "mainClass": "Dashboard",
+      "envFile": "${workspaceFolder}/.env",
+      "vmArgs": "--module-path \"${env:PATH_TO_FX_LIB}\" --add-modules javafx.controls,javafx.graphics --enable-native-access=javafx.graphics -Djava.library.path=\"${env:JAVAFX_HOME}/bin\""
+    },
+    {
+      "type": "java",
+      "name": "main",
+      "request": "launch",
+      "mainClass": "main"
+    },
+    {
+      "type": "java",
       "name": "Dashboard (JavaFX)",
       "request": "launch",
       "mainClass": "Dashboard",
-      "projectName": "OS-Project-Java_3c2a9ed2",
       "envFile": "${workspaceFolder}/.env",
-      "vmArgs": "--module-path \"${workspaceFolder}/lib/javafx\" --add-modules javafx.controls,javafx.graphics -Djava.library.path=\"${env:JAVAFX_HOME}/bin\""
+      "vmArgs": "--module-path \"${env:PATH_TO_FX_LIB}\" --add-modules javafx.controls,javafx.graphics --enable-native-access=javafx.graphics -Djava.library.path=\"${env:JAVAFX_HOME}/bin\""
     }
   ]
 }
