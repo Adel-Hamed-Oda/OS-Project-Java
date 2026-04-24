@@ -66,7 +66,7 @@ public class ProcessController {
                     for (int i = 0; i < lines.size(); i++) {
                         // Matches lines like "state: Ready" or "state = Running" etc.
                         if (lines.get(i).toLowerCase().startsWith("state")) {
-                            lines.set(i, "state," + state.toString() + ",PCB"); // Update the state line with the new state
+                            lines.set(i, "State," + state.toString() + ",PCB"); // Update the state line with the new state
                             break;
                         }
                     }
