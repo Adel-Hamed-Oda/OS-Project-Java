@@ -1,5 +1,4 @@
 
-
 import java.util.ArrayList;
 import java.util.List;
 
@@ -10,17 +9,12 @@ import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
-import javafx.scene.control.Button;
-import javafx.scene.control.ComboBox;
-import javafx.scene.control.Label;
-import javafx.scene.control.ListView;
-import javafx.scene.control.SplitPane;
-import javafx.scene.control.TextArea;
-import javafx.scene.control.TextField;
-import javafx.scene.layout.BorderPane;
-import javafx.scene.layout.HBox;
-import javafx.scene.layout.Priority;
-import javafx.scene.layout.VBox;
+import javafx.scene.control.*;
+import javafx.scene.layout.*;
+import javafx.scene.paint.Color;
+import javafx.scene.text.Font;
+import javafx.scene.text.Text;
+import javafx.scene.text.TextFlow;
 import javafx.stage.Stage;
 import javafx.util.Duration;
 
@@ -30,13 +24,14 @@ public class Dashboard extends Application {
     private final Label currentProcessLabel = new Label("Current Process: None");
     private final Label statusLabel = new Label("Status: Idle");
 
-    private final TextArea memoryArea = new TextArea();
+    private final TextFlow memoryFlow = new TextFlow();
     private final ListView<String> processStatesList = new ListView<>();
     private final ListView<String> readyQueueList = new ListView<>();
     private final ListView<String> blockedQueueList = new ListView<>();
 
     private final ComboBox<String> algorithmSelector = new ComboBox<>();
-    private final TextField rrQuantumField = new TextField("2");
+    private final Label quantumLabel = new Label("Quantum Time:");
+    private final TextField rrQuantumField = new TextField("");
     private final Button startButton = new Button("Start Simulation");
     private final Button stepButton = new Button("Step");
     private final Button runPauseButton = new Button("Run");
@@ -52,40 +47,75 @@ public class Dashboard extends Application {
     @Override
     public void start(Stage primaryStage) {
         BorderPane root = new BorderPane();
-        root.setPadding(new Insets(10));
+        root.getStyleClass().add("root-pane");
 
-        HBox controls = buildControls();
-        HBox topStatus = buildTopStatus();
+        // Top Section: Controls and Status Header
+        VBox topContainer = new VBox(15, buildControls(), buildTopStatus());
+        topContainer.setPadding(new Insets(20));
+        root.setTop(topContainer);
 
-        VBox queuePane = new VBox(6,
-            new Label("Ready Queue"), readyQueueList,
-            new Label("Blocked Queue"), blockedQueueList);
-        readyQueueList.setPrefHeight(100);
-        blockedQueueList.setPrefHeight(100);
+        // Left Section: Queues and States
+        VBox processBox = createCard("Process States", processStatesList);
+        VBox readyBox = createCard("Ready Queue", readyQueueList);
+        VBox blockedBox = createCard("Blocked Queue", blockedQueueList);
 
-        VBox leftPane = new VBox(8, new Label("Process States"), processStatesList, queuePane);
-        leftPane.setPadding(new Insets(10, 10, 10, 0));
-        VBox.setVgrow(processStatesList, Priority.ALWAYS);
+        VBox leftPane = new VBox(15, processBox, readyBox, blockedBox);
+        leftPane.setPadding(new Insets(0, 10, 20, 20));
+        leftPane.setPrefWidth(350);
+        VBox.setVgrow(processBox, Priority.ALWAYS);
 
-        memoryArea.setEditable(false);
-        memoryArea.setWrapText(false);
-        memoryArea.setStyle("-fx-font-family: 'Consolas', 'Courier New', monospace; -fx-font-size: 12px;");
+        // Center Section: Memory
+        ScrollPane memScrollPane = new ScrollPane(memoryFlow);
+        memScrollPane.setFitToWidth(true);
+        memScrollPane.setFitToHeight(true);
+        memScrollPane.getStyleClass().add("memory-scroll");
+        memoryFlow.getStyleClass().add("memory-container");
+        memoryFlow.setLineSpacing(2);
 
-        VBox centerPane = new VBox(8, new Label("Memory Content"), memoryArea);
-        centerPane.setPadding(new Insets(10, 0, 10, 10));
-        VBox.setVgrow(memoryArea, Priority.ALWAYS);
+        VBox memoryBox = createCard("System Memory Map", memScrollPane);
+        memoryBox.setPadding(new Insets(0, 20, 20, 10));
 
-        SplitPane body = new SplitPane(leftPane, centerPane);
-        body.setDividerPositions(0.25);
-
-        inputPanel = buildInputPanel();
-
-        root.setTop(new VBox(10, controls, topStatus));
+        SplitPane body = new SplitPane(leftPane, memoryBox);
+        body.setDividerPositions(0.3);
         root.setCenter(body);
+
+        // Bottom Section: Input
+        inputPanel = buildInputPanel();
         root.setBottom(inputPanel);
 
         Scene scene = new Scene(root, 1400, 800);
-        primaryStage.setTitle("OS Scheduler Dashboard");
+        // Link the CSS file
+        scene.getStylesheets().add(getClass().getResource("style.css").toExternalForm());
+
+        processStatesList.setCellFactory(lv -> new ListCell<String>() {
+            private final ProgressBar pb = new ProgressBar();
+            private final HBox container = new HBox(10, new Label(), pb);
+
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) {
+                    setGraphic(null);
+                } else {
+                    Label lbl = (Label) container.getChildren().get(0);
+                    lbl.setText(item);
+                    double progress = calculateProgress(item);
+                    pb.setProgress(progress);
+
+                    boolean isWaiting = item.contains("Waiting");
+                    if (pb.getProgress() >= 1.0)
+                        pb.setStyle("-fx-accent: #2f9e44;");
+                    else if (isWaiting)
+                        pb.setStyle("-fx-accent: #8d8c8b;");
+                    else
+                        pb.setStyle("-fx-accent: #4dabf7;");
+
+                    setGraphic(container);
+                }
+            }
+        });
+
+        primaryStage.setTitle("Modern OS Scheduler Dashboard");
         primaryStage.setScene(scene);
         primaryStage.show();
 
@@ -93,25 +123,95 @@ public class Dashboard extends Application {
         refreshUI();
     }
 
+    private VBox createCard(String title, Control content) {
+        Label header = new Label(title.toUpperCase());
+        header.getStyleClass().add("card-header");
+        VBox card = new VBox(8, header, content);
+        card.getStyleClass().add("card");
+        VBox.setVgrow(content, Priority.ALWAYS);
+        return card;
+    }
+
     private VBox buildInputPanel() {
-        inputField.setPromptText("Type input here...");
-        inputField.setDisable(true);
+        inputField.setPromptText("Enter system input...");
+        inputField.getStyleClass().add("modern-input");
+        inputField.setTooltip(new Tooltip("Enter the required process input and press Enter or click Submit"));
+        submitInputButton.getStyleClass().add("button-primary");
+
+        HBox inputRow = new HBox(12, inputField, submitInputButton);
+        inputRow.setAlignment(Pos.CENTER_LEFT);
+        HBox.setHgrow(inputField, Priority.ALWAYS);
 
         submitInputButton.setDisable(true);
         submitInputButton.setOnAction(event -> submitInputFromGUI());
         inputField.setOnAction(event -> submitInputFromGUI());
 
-        VBox container = new VBox(8,
-                new Label("User Input"),
-                inputRequestLabel,
-                new HBox(8, inputField, submitInputButton));
-        container.setPadding(new Insets(10, 0, 0, 0));
-        HBox.setHgrow(inputField, Priority.ALWAYS);
-        container.setVisible(false);
-        container.setManaged(false);
-        container.setDisable(true);
-
+        VBox container = new VBox(10, new Label("USER INPUT REQUESTED"), inputRequestLabel, inputRow);
+        container.getStyleClass().add("input-card");
+        container.setPadding(new Insets(20));
+        container.setVisible(true);
+        container.setManaged(true);
         return container;
+    }
+
+    private HBox buildControls() {
+        algorithmSelector.getItems().addAll("RR", "HRRN", "MLFQ");
+        algorithmSelector.setTooltip(new Tooltip("Select the scheduling algorithm (RR, HRRN, or MLFQ)"));
+        algorithmSelector.valueProperty().addListener((obs, oldVal, newVal) -> updateQuantumVisibility());
+
+        rrQuantumField.setTooltip(new Tooltip(
+                "Enter the time quantum for Round-Robin scheduling technique (must be a positive integer)"));
+
+        startButton.getStyleClass().add("button-start");
+        stepButton.getStyleClass().add("button-secondary");
+        runPauseButton.getStyleClass().add("button-secondary");
+
+        startButton.setOnAction(event -> startSimulation());
+        stepButton.setDisable(true);
+        stepButton.setOnAction(event -> Scheduler.requestStep());
+        runPauseButton.setDisable(true);
+        runPauseButton.setOnAction(event -> toggleRunPause());
+
+        HBox schedulerConfigGroup = new HBox(10,
+                new Label("Scheduling Algorithm:"), algorithmSelector,
+                quantumLabel, rrQuantumField);
+        schedulerConfigGroup.setAlignment(Pos.CENTER_LEFT);
+
+        HBox executionGroup = new HBox(10,
+                startButton, stepButton, runPauseButton,
+                statusLabel);
+        executionGroup.setAlignment(Pos.CENTER_LEFT);
+
+        Pane spacer = new Pane();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
+
+        HBox controls = new HBox(20, schedulerConfigGroup, spacer, executionGroup);
+
+        updateQuantumVisibility();
+
+        controls.setAlignment(Pos.CENTER_LEFT);
+        controls.getStyleClass().add("controls-bar");
+        return controls;
+    }
+
+    private void updateQuantumVisibility() {
+        boolean isRR = "RR".equals(algorithmSelector.getValue());
+        quantumLabel.setVisible(isRR);
+        quantumLabel.setManaged(isRR);
+        rrQuantumField.setVisible(isRR);
+        rrQuantumField.setManaged(isRR);
+    }
+
+    private HBox buildTopStatus() {
+        timeLabel.getStyleClass().add("status-value");
+        currentProcessLabel.getStyleClass().add("status-value");
+
+        HBox timeBox = new HBox(10, new Label("TIME: "), timeLabel);
+        HBox procBox = new HBox(10, new Label("CURRENT PROCESS: "), currentProcessLabel);
+
+        HBox topStatus = new HBox(40, timeBox, procBox);
+        topStatus.getStyleClass().add("status-header");
+        return topStatus;
     }
 
     private void submitInputFromGUI() {
@@ -124,37 +224,6 @@ public class Dashboard extends Application {
             inputField.setDisable(true);
             submitInputButton.setDisable(true);
         }
-    }
-
-    private HBox buildControls() {
-        algorithmSelector.getItems().addAll("RR", "HRRN", "MLFQ");
-        algorithmSelector.setValue("RR");
-
-        rrQuantumField.setPrefWidth(70);
-
-        startButton.setOnAction(event -> startSimulation());
-        stepButton.setDisable(true);
-        stepButton.setOnAction(event -> Scheduler.requestStep());
-        runPauseButton.setDisable(true);
-        runPauseButton.setOnAction(event -> toggleRunPause());
-
-        HBox controls = new HBox(10,
-                new Label("Algorithm:"), algorithmSelector,
-                new Label("RR Quantum:"), rrQuantumField,
-                startButton,
-            stepButton,
-            runPauseButton,
-                statusLabel);
-
-        controls.setAlignment(Pos.CENTER_LEFT);
-        controls.setPadding(new Insets(0, 0, 5, 0));
-        return controls;
-    }
-
-    private HBox buildTopStatus() {
-        HBox topStatus = new HBox(25, timeLabel, currentProcessLabel);
-        topStatus.setAlignment(Pos.CENTER_LEFT);
-        return topStatus;
     }
 
     private void initializeRefreshLoop() {
@@ -220,18 +289,18 @@ public class Dashboard extends Application {
         try {
             int value = Integer.parseInt(rrQuantumField.getText().trim());
             return Math.max(1, value);
-        } catch (NumberFormatException ex) {
+        } catch (Exception ex) {
             rrQuantumField.setText("2");
             return 2;
         }
     }
 
     private void refreshUI() {
-        timeLabel.setText("Time: " + Scheduler.getCurrentTimeSnapshot());
+        timeLabel.setText("" + Scheduler.getCurrentTimeSnapshot());
 
         Integer runningProcessID = Scheduler.getCurrentRunningProcessID();
         String runningValue = runningProcessID == null ? "None" : "P" + runningProcessID;
-        currentProcessLabel.setText("Current Process: " + runningValue);
+        currentProcessLabel.setText("" + runningValue);
 
         List<String> processStates = Scheduler.getProcessStateSnapshot();
         processStatesList.getItems().setAll(processStates);
@@ -240,7 +309,7 @@ public class Dashboard extends Application {
         blockedQueueList.getItems().setAll(Scheduler.getBlockedQueueSnapshot());
 
         List<String> memorySnapshot = Memory.getMemorySnapshot();
-        memoryArea.setText(String.join("\n", memorySnapshot));
+        refreshMemoryHeatmap(memorySnapshot);
 
         refreshInputWindowState();
 
@@ -263,9 +332,6 @@ public class Dashboard extends Application {
             inputRequestLabel.setText("Waiting for input from " + processText + ".");
             inputField.setDisable(false);
             submitInputButton.setDisable(false);
-            inputPanel.setManaged(true);
-            inputPanel.setVisible(true);
-            inputPanel.setDisable(false);
 
             statusLabel.setText("Status: Waiting for Input");
             Platform.runLater(inputField::requestFocus);
@@ -276,9 +342,50 @@ public class Dashboard extends Application {
         inputField.clear();
         inputField.setDisable(true);
         submitInputButton.setDisable(true);
-        inputPanel.setDisable(true);
-        inputPanel.setVisible(false);
-        inputPanel.setManaged(false);
+
+        if (!simulationCompleted && startButton.isDisable()) {
+            statusLabel.setText(Scheduler.isAutoRunEnabled() ? "Status: Running" : "Status: Ready to Step");
+        }
+    }
+
+    private void refreshMemoryHeatmap(List<String> memorySnapshot) {
+        memoryFlow.getChildren().clear();
+
+        for (String block : memorySnapshot) {
+            Text textNode = new Text(block + "\n");
+
+            textNode.setFont(Font.font("JetBrains Mono", 13));
+
+            if (block.contains("Free")) {
+                textNode.setFill(Color.web("#5c6370"));
+            } else if (block.contains("P1")) {
+                textNode.setFill(Color.web("#98c379")); // Green for Process 1
+            } else if (block.contains("P2")) {
+                textNode.setFill(Color.web("#61afef")); // Blue for Process 2
+            } else {
+                textNode.setFill(Color.web("#d19a66")); // Orange for others
+            }
+
+            memoryFlow.getChildren().add(textNode);
+        }
+    }
+
+    private double calculateProgress(String item) {
+        try {
+            if (item.contains("/")) {
+                int openParen = item.lastIndexOf("(") + 1;
+                int slash = item.indexOf("/");
+                int closeParen = item.indexOf(")");
+
+                double current = Double.parseDouble(item.substring(openParen, slash).trim());
+                double total = Double.parseDouble(item.substring(slash + 1, closeParen).trim());
+
+                return (total > 0) ? (current / total) : 0.0;
+            }
+        } catch (Exception e) {
+            return 0.0;
+        }
+        return 0.0;
     }
 
     public static void main(String[] args) {
