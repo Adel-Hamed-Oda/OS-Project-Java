@@ -39,7 +39,7 @@ public class Scheduler {
         unblockedProcessID = -1;
         disableStepMode();
 
-        ProcessController.instructionTable.clear();
+        ProcessController.initProcessController();
         Memory.initMemory();
         MutexManager.InitMutexes();
         Parser.initParser();
