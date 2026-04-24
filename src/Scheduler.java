@@ -147,7 +147,7 @@ public class Scheduler {
             String state = inferState(process);
             String row = "P" + process.getP_id()
                     + " | " + state
-                    + " | " + process.getExecuted_time() + "/" + process.getBurst_time();
+                    + " | (" + process.getExecuted_time() + "/" + process.getBurst_time() + ")";
             snapshot.add(row);
         }
         return snapshot;
@@ -389,10 +389,10 @@ public class Scheduler {
 
                     Memory.setPC(processId, currectPC + 1);
 
+                    current_process.set_Executed_time(current_process.getExecuted_time()+1);
                     current_time++;
                 }
 
-                current_process.set_Executed_time(current_process.getBurst_time());
                 ProcessController.setProcessState(current_process.getP_id(), ProcessState.Terminated);
 
                 System.out.println("Process " + current_process.getP_id() + " completed at time " + current_time);
