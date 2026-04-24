@@ -157,8 +157,10 @@ public class Dashboard extends Application {
     private HBox buildControls() {
         algorithmSelector.getItems().addAll("RR", "HRRN", "MLFQ");
         algorithmSelector.setTooltip(new Tooltip("Select the scheduling algorithm (RR, HRRN, or MLFQ)"));
-        algorithmSelector.valueProperty().addListener((obs, oldVal, newVal) -> updateQuantumVisibility());
+        algorithmSelector.valueProperty().addListener((obs, oldVal, newVal) -> updateQuantumUsability());
+        algorithmSelector.valueProperty().addListener((obs, oldVal, newVal) -> updateStartButtonState());
 
+        rrQuantumField.textProperty().addListener((obs, oldVal, newVal) -> updateStartButtonState());
         rrQuantumField.setTooltip(new Tooltip(
                 "Enter the time quantum for Round-Robin scheduling technique (must be a positive integer)"));
 
@@ -166,6 +168,7 @@ public class Dashboard extends Application {
         stepButton.getStyleClass().add("button-secondary");
         runPauseButton.getStyleClass().add("button-secondary");
 
+        startButton.setDisable(true);
         startButton.setOnAction(event -> startSimulation());
         stepButton.setDisable(true);
         stepButton.setOnAction(event -> Scheduler.requestStep());
@@ -176,6 +179,8 @@ public class Dashboard extends Application {
                 new Label("Scheduling Algorithm:"), algorithmSelector,
                 quantumLabel, rrQuantumField);
         schedulerConfigGroup.setAlignment(Pos.CENTER_LEFT);
+        quantumLabel.setDisable(true);
+        rrQuantumField.setDisable(true);
 
         HBox executionGroup = new HBox(10,
                 startButton, stepButton, runPauseButton,
@@ -187,19 +192,23 @@ public class Dashboard extends Application {
 
         HBox controls = new HBox(20, schedulerConfigGroup, spacer, executionGroup);
 
-        updateQuantumVisibility();
+        updateQuantumUsability();
+        updateStartButtonState();
 
         controls.setAlignment(Pos.CENTER_LEFT);
         controls.getStyleClass().add("controls-bar");
         return controls;
     }
 
-    private void updateQuantumVisibility() {
+    private void updateQuantumUsability() {
         boolean isRR = "RR".equals(algorithmSelector.getValue());
-        quantumLabel.setVisible(isRR);
-        quantumLabel.setManaged(isRR);
-        rrQuantumField.setVisible(isRR);
-        rrQuantumField.setManaged(isRR);
+        quantumLabel.setDisable(!isRR);
+        rrQuantumField.setDisable(!isRR);
+    }
+
+    private void updateStartButtonState() {
+        String algorithmSelected = algorithmSelector.getValue();
+        startButton.setDisable(algorithmSelected == null || algorithmSelected.isEmpty()|| algorithmSelected.equals("RR") && parseRRQuantum() <= 0);
     }
 
     private HBox buildTopStatus() {
@@ -288,10 +297,9 @@ public class Dashboard extends Application {
     private int parseRRQuantum() {
         try {
             int value = Integer.parseInt(rrQuantumField.getText().trim());
-            return Math.max(1, value);
+            return value;
         } catch (Exception ex) {
-            rrQuantumField.setText("2");
-            return 2;
+            return -1;
         }
     }
 
