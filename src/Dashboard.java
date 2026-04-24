@@ -6,15 +6,12 @@ import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.application.Application;
 import javafx.application.Platform;
+import javafx.beans.property.SimpleStringProperty;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
-import javafx.scene.paint.Color;
-import javafx.scene.text.Font;
-import javafx.scene.text.Text;
-import javafx.scene.text.TextFlow;
 import javafx.stage.Stage;
 import javafx.util.Duration;
 
@@ -24,7 +21,7 @@ public class Dashboard extends Application {
     private final Label currentProcessLabel = new Label("Current Process: None");
     private final Label statusLabel = new Label("Status: Idle");
 
-    private final TextFlow memoryFlow = new TextFlow();
+    private final TableView<MemoryRow> memoryTable = new TableView<>();
     private final ListView<String> processStatesList = new ListView<>();
     private final ListView<String> readyQueueList = new ListView<>();
     private final ListView<String> blockedQueueList = new ListView<>();
@@ -40,6 +37,7 @@ public class Dashboard extends Application {
     private final TextField inputField = new TextField();
     private final Button submitInputButton = new Button("Submit Input");
     private VBox inputPanel;
+    private List<String> lastMemorySnapshot = new ArrayList<>();
 
     private Timeline uiRefreshTimeline;
     private volatile boolean simulationCompleted = false;
@@ -65,14 +63,78 @@ public class Dashboard extends Application {
         VBox.setVgrow(processBox, Priority.ALWAYS);
 
         // Center Section: Memory
-        ScrollPane memScrollPane = new ScrollPane(memoryFlow);
-        memScrollPane.setFitToWidth(true);
-        memScrollPane.setFitToHeight(true);
-        memScrollPane.getStyleClass().add("memory-scroll");
-        memoryFlow.getStyleClass().add("memory-container");
-        memoryFlow.setLineSpacing(2);
+        TableColumn<MemoryRow, String> addressColumn = new TableColumn<>("Address");
+        addressColumn.setCellValueFactory(cellData -> new SimpleStringProperty(cellData.getValue().address()));
+        addressColumn.setSortable(false);
+        addressColumn.setReorderable(false);
+        addressColumn.setMinWidth(68);
+        addressColumn.setPrefWidth(72);
+        addressColumn.setMaxWidth(82);
 
-        VBox memoryBox = createCard("System Memory Map", memScrollPane);
+        TableColumn<MemoryRow, String> nameColumn = new TableColumn<>("Name");
+        nameColumn.setCellValueFactory(cellData -> new SimpleStringProperty(cellData.getValue().variable()));
+        nameColumn.setSortable(false);
+        nameColumn.setReorderable(false);
+        nameColumn.setMinWidth(120);
+        nameColumn.setPrefWidth(130);
+
+        TableColumn<MemoryRow, String> valueColumn = new TableColumn<>("Value");
+        valueColumn.setCellValueFactory(cellData -> new SimpleStringProperty(cellData.getValue().value()));
+        valueColumn.setSortable(false);
+        valueColumn.setReorderable(false);
+        valueColumn.setMinWidth(220);
+        valueColumn.setPrefWidth(230);
+
+        TableColumn<MemoryRow, String> typeColumn = new TableColumn<>("Type");
+        typeColumn.setCellValueFactory(cellData -> new SimpleStringProperty(cellData.getValue().type()));
+        typeColumn.setSortable(false);
+        typeColumn.setReorderable(false);
+        typeColumn.setMinWidth(100);
+        typeColumn.setPrefWidth(100);
+        typeColumn.setMaxWidth(100);
+
+        memoryTable.getColumns().setAll(addressColumn, nameColumn, valueColumn, typeColumn);
+        memoryTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+        memoryTable.getStyleClass().add("memory-table");
+
+        addressColumn.setCellFactory(column -> createDefaultMemoryCell());
+        nameColumn.setCellFactory(column -> createDefaultMemoryCell());
+        valueColumn.setCellFactory(column -> createDefaultMemoryCell());
+
+        typeColumn.setCellFactory(column -> new TableCell<>() {
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty) {
+                    setText(null);
+                    setStyle("");
+                    setTooltip(null);
+                    return;
+                }
+
+                boolean missing = item == null || item.trim().isEmpty();
+                if (missing) {
+                    setText("EMPTY");
+                    setStyle("-fx-text-fill: #9192947b; -fx-font-style: italic;");
+                    setTooltip(new Tooltip("No value"));
+                    return;
+                }
+
+                setText(item);
+                setTooltip(null);
+                if ("Free".equals(item)) {
+                    setStyle("-fx-text-fill: #5f87d1;");
+                } else if ("Variable".equals(item)) {
+                    setStyle("-fx-text-fill: #98c379;");
+                } else if ("Instruction".equals(item)) {
+                    setStyle("-fx-text-fill: #ea80ee;");
+                } else {
+                    setStyle("-fx-text-fill: #d19a66;");
+                }
+            }
+        });
+
+        VBox memoryBox = createCard("System Memory Map", memoryTable);
         memoryBox.setPadding(new Insets(0, 20, 20, 10));
 
         SplitPane body = new SplitPane(leftPane, memoryBox);
@@ -130,6 +192,34 @@ public class Dashboard extends Application {
         card.getStyleClass().add("card");
         VBox.setVgrow(content, Priority.ALWAYS);
         return card;
+    }
+
+    private TableCell<MemoryRow, String> createDefaultMemoryCell() {
+        return new TableCell<>() {
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+
+                if (empty) {
+                    setText(null);
+                    setStyle("");
+                    setTooltip(null);
+                    return;
+                }
+
+                boolean missing = item == null || item.trim().isEmpty();
+                if (missing) {
+                    setText("EMPTY");
+                    setStyle("-fx-text-fill: #8a8f98; -fx-font-style: italic;");
+                    setTooltip(new Tooltip("No value"));
+                    return;
+                }
+
+                setText(item);
+                setStyle("");
+                setTooltip(null);
+            }
+        };
     }
 
     private VBox buildInputPanel() {
@@ -194,6 +284,9 @@ public class Dashboard extends Application {
 
         updateQuantumUsability();
         updateStartButtonState();
+        Memory.initMemory();
+        List<String> initialMemorySnapshot = Memory.getMemorySnapshot();
+        refreshMemoryTable(initialMemorySnapshot);
 
         controls.setAlignment(Pos.CENTER_LEFT);
         controls.getStyleClass().add("controls-bar");
@@ -208,7 +301,8 @@ public class Dashboard extends Application {
 
     private void updateStartButtonState() {
         String algorithmSelected = algorithmSelector.getValue();
-        startButton.setDisable(algorithmSelected == null || algorithmSelected.isEmpty()|| algorithmSelected.equals("RR") && parseRRQuantum() <= 0);
+        startButton.setDisable(algorithmSelected == null || algorithmSelected.isEmpty()
+                || algorithmSelected.equals("RR") && parseRRQuantum() <= 0);
     }
 
     private HBox buildTopStatus() {
@@ -317,7 +411,7 @@ public class Dashboard extends Application {
         blockedQueueList.getItems().setAll(Scheduler.getBlockedQueueSnapshot());
 
         List<String> memorySnapshot = Memory.getMemorySnapshot();
-        refreshMemoryHeatmap(memorySnapshot);
+        refreshMemoryTable(memorySnapshot);
 
         refreshInputWindowState();
 
@@ -356,26 +450,43 @@ public class Dashboard extends Application {
         }
     }
 
-    private void refreshMemoryHeatmap(List<String> memorySnapshot) {
-        memoryFlow.getChildren().clear();
-
-        for (String block : memorySnapshot) {
-            Text textNode = new Text(block + "\n");
-
-            textNode.setFont(Font.font("JetBrains Mono", 13));
-
-            if (block.contains("Free")) {
-                textNode.setFill(Color.web("#5c6370"));
-            } else if (block.contains("P1")) {
-                textNode.setFill(Color.web("#98c379")); // Green for Process 1
-            } else if (block.contains("P2")) {
-                textNode.setFill(Color.web("#61afef")); // Blue for Process 2
-            } else {
-                textNode.setFill(Color.web("#d19a66")); // Orange for others
-            }
-
-            memoryFlow.getChildren().add(textNode);
+    private void refreshMemoryTable(List<String> memorySnapshot) {
+        if (memorySnapshot.equals(lastMemorySnapshot)) {
+            return;
         }
+
+        List<MemoryRow> rows = new ArrayList<>(memorySnapshot.size());
+        for (String line : memorySnapshot) {
+            rows.add(parseMemoryRow(line));
+        }
+        memoryTable.getItems().setAll(rows);
+        lastMemorySnapshot = new ArrayList<>(memorySnapshot);
+    }
+
+    private MemoryRow parseMemoryRow(String line) {
+        int addressMarker = line.indexOf(':');
+        if (addressMarker < 0) {
+            return new MemoryRow("", "", line, "");
+        }
+
+        String addressPart = line.substring(0, addressMarker).replace("Address", "").trim();
+        String payload = line.substring(addressMarker + 1).trim();
+
+        int firstComma = payload.indexOf(',');
+        int lastComma = payload.lastIndexOf(',');
+
+        if (firstComma < 0 || lastComma < 0 || firstComma == lastComma) {
+            return new MemoryRow(addressPart, "", payload, "");
+        }
+
+        String variablePart = payload.substring(0, firstComma).trim();
+        String valuePart = payload.substring(firstComma + 1, lastComma).trim();
+        String typePart = payload.substring(lastComma + 1).trim();
+
+        return new MemoryRow(addressPart, variablePart, valuePart, typePart);
+    }
+
+    private record MemoryRow(String address, String variable, String value, String type) {
     }
 
     private double calculateProgress(String item) {

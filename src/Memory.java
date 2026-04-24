@@ -24,19 +24,19 @@ public class Memory {
             throw new NotEnoughMemoryException("Not enough memory to allocate process " + processId);
         }
 
-        memory[startIndex].name = "id";
+        memory[startIndex].name = "ID";
         memory[startIndex].value = String.valueOf(processId);
         memory[startIndex].type = CellType.PCB;
 
-        memory[startIndex + 1].name = "state";
+        memory[startIndex + 1].name = "State";
         memory[startIndex + 1].value = String.valueOf(ProcessState.Ready);
         memory[startIndex + 1].type = CellType.PCB;
 
-        memory[startIndex + 2].name = "pc";
+        memory[startIndex + 2].name = "PC";
         memory[startIndex + 2].value = String.valueOf(0);
         memory[startIndex + 2].type = CellType.PCB;
 
-        memory[startIndex + 3].name = "bounds";
+        memory[startIndex + 3].name = "Bounds";
         memory[startIndex + 3].value = startIndex + "-" + (startIndex + requiredSpace - 1);
         memory[startIndex + 3].type = CellType.PCB;
 

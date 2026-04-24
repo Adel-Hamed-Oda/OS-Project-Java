@@ -68,26 +68,56 @@
 
 }
 
-.memory-scroll {
-    -fx-background-color: transparent;
+.memory-table {
+    -fx-background-color: #2b3035;
     -fx-background-insets: 0;
-    -fx-padding: 0;
     -fx-border-color: #495057;
     -fx-border-radius: 4;
-    -fx-background-radius: 4;
 }
 
-.memory-scroll > .viewport {
+.memory-table .column-header-background {
+    -fx-background-color: #212529;
+}
+
+.memory-table .column-header,
+.memory-table .filler {
+    -fx-background-color: #212529;
+    -fx-border-color: #343a40;
+}
+
+.memory-table .column-header .label {
+    -fx-text-fill: #dee2e6;
+    -fx-font-size: 12px;
+}
+
+.memory-table .table-row-cell {
     -fx-background-color: #2b3035;
-    -fx-background-radius: 4;
+    -fx-table-cell-border-color: #343a40;
 }
 
-.memory-scroll .scroll-bar:vertical {
+.memory-table .table-row-cell:selected {
+    -fx-background-color: #495057;
+}
+
+.memory-table .table-cell {
+    -fx-font-family: "Consolas";
+    -fx-font-size: 13px;
+    -fx-padding: 4 8;
+    -fx-text-fill: #e9ecef;
+    -fx-border-color: transparent #3d434b #3d434b transparent;
+    -fx-border-width: 0 1 1 0;
+}
+
+.memory-table .table-row-cell:selected .table-cell {
+    -fx-border-color: transparent #56606b #56606b transparent;
+}
+
+.memory-table .scroll-bar:vertical {
     -fx-background-color: transparent;
     -fx-width: 8;
 }
 
-.memory-scroll .scroll-bar:vertical .thumb {
+.memory-table .scroll-bar:vertical .thumb {
     -fx-background-color: #4b5263;
     -fx-background-radius: 10;
 }
