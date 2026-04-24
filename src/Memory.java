@@ -278,7 +278,7 @@ public class Memory {
         // Fallback: Just grab the first process we can find that isn't currently "Running"
         if (victimId == -1) {
             for (int i = 0; i < MEMORY_SIZE; i++) {
-                if (memory[i].type == CellType.PCB && "id".equals(memory[i].name)) {
+                if (memory[i].type == CellType.PCB && isPCBIdField(memory[i].name)) {
                     int processId = Integer.parseInt(memory[i].value);
                     ProcessState state = getProcessState(processId);
                     if (state != null && !state.name().equals("Running")) {
@@ -294,7 +294,7 @@ public class Memory {
     // Searches memory for a process that matches the specific state name
     private static int findProcessByState(String targetStateName) {
         for (int i = 0; i < MEMORY_SIZE; i++) {
-            if (memory[i].type == CellType.PCB && "id".equals(memory[i].name)) {
+            if (memory[i].type == CellType.PCB && isPCBIdField(memory[i].name)) {
                 int processId = Integer.parseInt(memory[i].value);
                 ProcessState state = getProcessState(processId);
                 
@@ -431,7 +431,7 @@ public class Memory {
 
         // Scan for every process's id cell and update its bounds to reflect the new position.
         for (int i = 0; i < MEMORY_SIZE; i++) {
-            if (memory[i].type == CellType.PCB && "id".equals(memory[i].name)) {
+            if (memory[i].type == CellType.PCB && isPCBIdField(memory[i].name)) {
                 updateProcessBounds(i);
             }
         }
@@ -456,7 +456,7 @@ public class Memory {
     public static boolean processExistsInMemory(int processId) {
         for (int i = 0; i < MEMORY_SIZE; i++) {
             if (memory[i].type == CellType.PCB && 
-                memory[i].name.equals("id") &&
+                isPCBIdField(memory[i].name) &&
                 memory[i].value.equals(String.valueOf(processId)))
             {
                 return true;
@@ -475,7 +475,7 @@ public class Memory {
 
         for (int i = 0; i < MEMORY_SIZE; i++) {
             if (memory[i].type == CellType.PCB && 
-                memory[i].name.equals("id") &&
+                isPCBIdField(memory[i].name) &&
                 memory[i].value.equals(String.valueOf(processId)))
             {
                 lowerBoundary = memory[i + 3].value != null ? Integer.parseInt(memory[i + 3].value.split("-")[0]) : -1;
@@ -496,6 +496,10 @@ public class Memory {
             }
         }
         return freeCount;
+    }
+
+    private static boolean isPCBIdField(String name) {
+        return name != null && name.equalsIgnoreCase("id");
     }
 
     private static void updateProcessBounds(int newStart) {

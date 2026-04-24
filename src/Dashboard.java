@@ -93,7 +93,7 @@ public class Dashboard extends Application {
         typeColumn.setPrefWidth(100);
         typeColumn.setMaxWidth(100);
 
-        memoryTable.getColumns().setAll(addressColumn, nameColumn, valueColumn, typeColumn);
+        memoryTable.getColumns().setAll(java.util.Arrays.asList(addressColumn, nameColumn, valueColumn, typeColumn));
         memoryTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
         memoryTable.getStyleClass().add("memory-table");
 
@@ -210,7 +210,7 @@ public class Dashboard extends Application {
                 boolean missing = item == null || item.trim().isEmpty();
                 if (missing) {
                     setText("EMPTY");
-                    setStyle("-fx-text-fill: #8a8f98; -fx-font-style: italic;");
+                    setStyle("-fx-text-fill: #656666; -fx-font-style: italic;");
                     setTooltip(new Tooltip("No value"));
                     return;
                 }
