@@ -14,6 +14,8 @@ public class ProcessController {
 
     public static String DISK_FILE_NAME = "Disk.txt";
 
+    private static ArrayList<String> programMap = new ArrayList<>();
+
     public static void initProcessController() {
         instructionTable.clear();
 
@@ -49,6 +51,7 @@ public class ProcessController {
                 instructions = java.util.Arrays.copyOf(instructions, instructions.length + 1);
                 instructions[instructions.length - 1] = line;
             }
+            programMap.add(fileName);
         } catch (IOException e) {
             System.out.println("Error reading file: " + e.getMessage());
         }
@@ -63,6 +66,10 @@ public class ProcessController {
     public static int getInstructionCount(int processID) {
         String[] instructions = getInstructions(processID);
         return instructions != null ? instructions.length : 0;
+    }
+
+    public static String getProgramName(int processID) {
+        return programMap.get(processID);
     }
 
     public static boolean contextExists(int processID) {
