@@ -445,6 +445,16 @@ public class Memory {
         return false;
     }
 
+    public static int getCurrentInstructionIndex(int processId) {
+        int[] bounds = findProcessBounds(processId);
+        if (bounds[0] == -1 || bounds[1] == -1) {
+            System.out.println("Process " + processId + " not found in memory.");
+            return -1;
+        }
+
+        return Integer.parseInt(memory[bounds[0] + 2].value) + bounds[0] + 7; // PC is offset by 3 from the start of the process block
+    }
+
     // #endregion
 
     // #region Helper Methods
