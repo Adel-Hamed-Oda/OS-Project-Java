@@ -58,7 +58,7 @@ public class Scheduler {
         }
 
         allProcesses.addAll(convertjobPoolToProcesses());
-        Dashboard.updateReadyQueueDisplay(getReadyQueueSnapshot(),getMLFQsSnapshot());
+        Dashboard.updateReadyQueueDisplay(getReadyQueueSnapshot(), getMLFQsSnapshot());
     }
 
     public static void enableStepMode() {
@@ -214,18 +214,24 @@ public class Scheduler {
     }
 
     private static void handleReadyQueueChange() {
-        Dashboard.updateReadyQueueDisplay(getReadyQueueSnapshot(),getMLFQsSnapshot());
+        Dashboard.updateReadyQueueDisplay(getReadyQueueSnapshot(), getMLFQsSnapshot());
         waitForStepIfEnabled();
     }
 
     private static void offerToReadyQueue(int processID) {
         readyQueue.offer(processID);
-        // handleReadyQueueChange();
+        if (!Dashboard.isDisplayAfterEveryChange()) {
+            return;
+        }
+        handleReadyQueueChange();
     }
 
     private static void removeFromReadyQueue(int processID) {
         readyQueue.remove(processID);
-        // handleReadyQueueChange();
+        if (!Dashboard.isDisplayAfterEveryChange()) {
+            return;
+        }
+        handleReadyQueueChange();
     }
 
     public static synchronized List<String> getBlockedQueueSnapshot() {

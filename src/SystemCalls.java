@@ -12,7 +12,7 @@ public class SystemCalls {
     private static volatile boolean awaitingInput = false;
     private static volatile Integer awaitingInputProcessID = null;
 
-    public static String readFile(String fileName)  {
+    public static String readFile(String fileName) {
         StringBuilder content = new StringBuilder();
         try {
             BufferedReader br = new BufferedReader(new FileReader(fileName));
@@ -22,7 +22,11 @@ public class SystemCalls {
             }
             br.close();
         } catch (IOException e) {
+            Dashboard.appendProgramOutput("ERROR: File Not Found");
             System.out.println("Error reading file: " + e.getMessage());
+        } catch (Exception e) {
+            Dashboard.appendProgramOutput("ERROR");
+            System.out.println("Unexpected error: " + e.getMessage());
         }
         return content.toString();
     }
@@ -36,7 +40,11 @@ public class SystemCalls {
         try (FileWriter writer = new FileWriter(file)) {
             writer.write(data);
         } catch (IOException e) {
+                        Dashboard.appendProgramOutput("ERROR");
             System.out.println("Error writing to file: " + e.getMessage());
+        } catch (Exception e) {
+            Dashboard.appendProgramOutput("ERROR");
+            System.out.println("Unexpected error: " + e.getMessage());
         }
     }
 
@@ -90,23 +98,31 @@ public class SystemCalls {
     }
 
     public static void printFromTo(String var1, String var2) {
-        int pid = Scheduler.getCurrentProcessID();
-        
-        String value1 = Memory.getVariable(pid, var1);
-        String value2 = Memory.getVariable(pid, var2);
-        
-        int num1 = Integer.parseInt(value1);
-        int num2 = Integer.parseInt(value2);
+        try {
+            int pid = Scheduler.getCurrentProcessID();
 
-        StringBuilder output = new StringBuilder();
-        for (int i = num1; i <= num2; i++) {
-            if (output.length() > 0) {
-                output.append(' ');
+            String value1 = Memory.getVariable(pid, var1);
+            String value2 = Memory.getVariable(pid, var2);
+
+            int num1 = Integer.parseInt(value1);
+            int num2 = Integer.parseInt(value2);
+
+            StringBuilder output = new StringBuilder();
+            for (int i = num1; i <= num2; i++) {
+                if (output.length() > 0) {
+                    output.append(' ');
+                }
+                output.append(i);
             }
-            output.append(i);
-        }
 
-        Dashboard.appendProgramOutput(output.toString());
-        System.out.println(output);
+            Dashboard.appendProgramOutput(output.toString());
+            System.out.println(output);
+        } catch (NumberFormatException e) {
+            Dashboard.appendProgramOutput("ERROR: Invalid Input");
+            System.out.println("Error: Variables must contain valid integers for printFromTo.");
+        } catch (Exception e) {
+            Dashboard.appendProgramOutput("ERROR");
+            System.out.println("Error in printFromTo: " + e.getMessage());
+        }
     }
 }
