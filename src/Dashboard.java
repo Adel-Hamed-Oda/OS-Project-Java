@@ -17,6 +17,8 @@ import javafx.util.Duration;
 
 public class Dashboard extends Application {
 
+    private static Dashboard activeDashboard;
+
     private final Label timeLabel = new Label("Time: 0");
     private final Label currentProcessLabel = new Label("Current Process: None");
     private final Label statusLabel = new Label("Status: Idle");
@@ -55,6 +57,8 @@ public class Dashboard extends Application {
 
     @Override
     public void start(Stage primaryStage) {
+        activeDashboard = this;
+
         BorderPane root = new BorderPane();
         root.getStyleClass().add("root-pane");
 
@@ -594,6 +598,8 @@ public class Dashboard extends Application {
         simulationEndedByUser = false;
         statusLabel.setText("Status: Ready to Step");
 
+        clearOutPutPanels();
+
         Scheduler.initializeSimulation();
         Scheduler.enableStepMode();
         Scheduler.setAutoRun(false);
@@ -779,6 +785,37 @@ public class Dashboard extends Application {
             return 0.0;
         }
         return 0.0;
+    }
+
+    public static void appendProgramOutput(String message) {
+        Dashboard dashboard = activeDashboard;
+        if (dashboard == null || message == null) {
+            return;
+        }
+
+        int processId = Scheduler.getCurrentProcessID();
+        TextArea outputArea = dashboard.getOutputAreaForProcess(processId);
+        if (outputArea == null) {
+            return;
+        }
+
+        Platform.runLater(() -> outputArea.appendText(message + System.lineSeparator()));
+    }
+
+    private TextArea getOutputAreaForProcess(int processId) {
+        String program = ProcessController.getProgramName(processId);
+        return switch (program) {
+            case "Program_1.txt" -> outputArea1;
+            case "Program_2.txt" -> outputArea2;
+            case "Program_3.txt" -> outputArea3;
+            default -> null;
+        };
+    }
+
+    private void clearOutPutPanels() {
+        outputArea1.clear();
+        outputArea2.clear();
+        outputArea3.clear();
     }
 
     public static void main(String[] args) {
