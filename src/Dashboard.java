@@ -1,4 +1,3 @@
-
 import java.util.ArrayList;
 import java.util.List;
 
@@ -116,7 +115,34 @@ public class Dashboard extends Application {
         memoryTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
         memoryTable.getStyleClass().add("memory-table");
 
-        addressColumn.setCellFactory(column -> createDefaultMemoryCell());
+        // Custom Cell Factory for drawing the arrow on the address column
+        addressColumn.setCellFactory(column -> new TableCell<>() {
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) {
+                    setText(null);
+                    setStyle("");
+                    setTooltip(null);
+                    return;
+                }
+
+                int address = -1;
+                try {
+                    address = Integer.parseInt(item.trim());
+                } catch (NumberFormatException ignored) {}
+
+                // if (address != -1 && address == currentInstructionIndex) {
+                if(address != -1) {
+                    setText("--> " + item);
+                    setStyle("-fx-font-weight: bold; -fx-text-fill: #e06c75;");
+                } else {
+                    setText(item);
+                    setStyle("");
+                }
+            }
+        });
+        
         nameColumn.setCellFactory(column -> createDefaultMemoryCell());
         valueColumn.setCellFactory(column -> createDefaultMemoryCell());
 
@@ -141,14 +167,23 @@ public class Dashboard extends Application {
 
                 setText(item);
                 setTooltip(null);
-                if ("Free".equals(item)) {
-                    setStyle("-fx-text-fill: #4dabf7;");
-                } else if ("Variable".equals(item)) {
-                    setStyle("-fx-text-fill: #98c379;");
-                } else if ("Instruction".equals(item)) {
-                    setStyle("-fx-text-fill: #ea80ee;");
+
+                TableRow<MemoryRow> tableRow = getTableRow();
+                MemoryRow row = tableRow != null ? tableRow.getItem() : null;
+                if (row != null && row.processId() != null && !row.processId().isEmpty()) {
+                    String color = getProcessColor(row.processId());
+                    setStyle("-fx-text-fill: " + color + ";");
                 } else {
-                    setStyle("-fx-text-fill: #d19a66;");
+                    // Default type colors for free or no process
+                    if ("Free".equals(item)) {
+                        setStyle("-fx-text-fill: #4dabf7;");
+                    } else if ("Variable".equals(item)) {
+                        setStyle("-fx-text-fill: #98c379;");
+                    } else if ("Instruction".equals(item)) {
+                        setStyle("-fx-text-fill: #ea80ee;");
+                    } else {
+                        setStyle("-fx-text-fill: #d19a66;");
+                    }
                 }
             }
         });
@@ -241,8 +276,21 @@ public class Dashboard extends Application {
                 }
 
                 setText(item);
-                setStyle("");
                 setTooltip(null);
+
+                // Set color based on processId
+                TableRow<MemoryRow> tableRow = getTableRow();
+                MemoryRow row = tableRow != null ? tableRow.getItem() : null;
+                if (row != null) {
+                    String color = getProcessColor(row.processId());
+                    if (!color.isEmpty()) {
+                        setStyle("-fx-text-fill: " + color + ";");
+                    } else {
+                        setStyle("");
+                    }
+                } else {
+                    setStyle("");
+                }
             }
         };
     }
@@ -739,14 +787,26 @@ public class Dashboard extends Application {
         for (String line : memorySnapshot) {
             rows.add(parseMemoryRow(line));
         }
-        memoryTable.getItems().setAll(rows);
+
+        // Assign processIds
+        String currentProcessId = "";
+        List<MemoryRow> updatedRows = new ArrayList<>();
+        for (MemoryRow row : rows) {
+            if ("PCB".equals(row.type()) && "ID".equals(row.variable())) {
+                currentProcessId = row.value();
+            }
+            String pid = "Free".equals(row.type()) ? "" : currentProcessId;
+            updatedRows.add(new MemoryRow(row.address(), row.variable(), row.value(), row.type(), pid));
+        }
+
+        memoryTable.getItems().setAll(updatedRows);
         lastMemorySnapshot = new ArrayList<>(memorySnapshot);
     }
 
     private MemoryRow parseMemoryRow(String line) {
         int addressMarker = line.indexOf(':');
         if (addressMarker < 0) {
-            return new MemoryRow("", "", line, "");
+            return new MemoryRow("", "", line, "", "");
         }
 
         String addressPart = line.substring(0, addressMarker).replace("Address", "").trim();
@@ -756,17 +816,30 @@ public class Dashboard extends Application {
         int lastComma = payload.lastIndexOf(',');
 
         if (firstComma < 0 || lastComma < 0 || firstComma == lastComma) {
-            return new MemoryRow(addressPart, "", payload, "");
+            return new MemoryRow(addressPart, "", payload, "", "");
         }
 
         String variablePart = payload.substring(0, firstComma).trim();
         String valuePart = payload.substring(firstComma + 1, lastComma).trim();
         String typePart = payload.substring(lastComma + 1).trim();
 
-        return new MemoryRow(addressPart, variablePart, valuePart, typePart);
+        return new MemoryRow(addressPart, variablePart, valuePart, typePart, "");
     }
 
-    private record MemoryRow(String address, String variable, String value, String type) {
+    private record MemoryRow(String address, String variable, String value, String type, String processId) {
+    }
+
+    private String getProcessColor(String processId) {
+        if (processId == null || processId.isEmpty()) {
+            return ""; // No color for free or invalid
+        }
+        try {
+            int id = Integer.parseInt(processId);
+            String[] colors = {"#FFA500", "#4ECDC4", "#BA55D3", "#96CEB4", "#FFEAA7", "#DDA0DD", "#98D8C8", "#F7DC6F", "#BB8FCE", "#85C1E9"};
+            return colors[id % colors.length];
+        } catch (NumberFormatException e) {
+            return "";
+        }
     }
 
     private double calculateProgress(String item) {
