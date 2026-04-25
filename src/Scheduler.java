@@ -11,8 +11,9 @@ public class Scheduler {
     private static int pendingStepCount = 0;
     private static volatile boolean stopSimulationRequested = false;
 
-    public static Queue<Integer> readyQueue = new LinkedList<>(); // should things from the waiting queue return to the
-                                                                  // beginning or the end of the queue?
+    public static Queue<Integer> readyQueue = new LinkedList<>();
+    public static List<Queue<OS_Process>> PQs = new ArrayList<>();
+
     public static Queue<Integer> waitingQueueInput = new LinkedList<>();
     public static Queue<Integer> waitingQueueOutput = new LinkedList<>();
     public static Queue<Integer> waitingQueueMemory = new LinkedList<>();
@@ -41,7 +42,8 @@ public class Scheduler {
         stopSimulationRequested = false;
         disableStepMode();
 
-        ProcessController.initProcessController();;
+        ProcessController.initProcessController();
+        ;
         Memory.initMemory();
         MutexManager.InitMutexes();
         Parser.initParser();
@@ -56,6 +58,7 @@ public class Scheduler {
         }
 
         allProcesses.addAll(convertjobPoolToProcesses());
+        Dashboard.updateReadyQueueDisplay(getReadyQueueSnapshot(),getMLFQsSnapshot());
     }
 
     public static void enableStepMode() {
@@ -157,7 +160,9 @@ public class Scheduler {
         List<String> snapshot = new ArrayList<>();
         for (OS_Process process : allProcesses) {
             String state = inferState(process);
+            String programName = ProcessController.getProgramName(process.getP_id());
             String row = "P" + process.getP_id()
+                    + " | " + Dashboard.canonicalProgramFileName(programName)
                     + " | " + state
                     + " | (" + process.getExecuted_time() + "/" + process.getBurst_time() + ")";
             snapshot.add(row);
@@ -165,30 +170,75 @@ public class Scheduler {
         return snapshot;
     }
 
-    public static synchronized List<String> getReadyQueueSnapshot() {
+    public static synchronized String getReadyQueueSnapshot() {
         List<String> snapshot = new ArrayList<>();
         for (Integer processID : readyQueue) {
             snapshot.add("P" + processID);
         }
 
         if (snapshot.isEmpty()) {
-            snapshot.add("(empty)");
+            snapshot.add("(EMPTY)");
         }
 
-        return snapshot;
+        String res = "";
+        for (String s : snapshot) {
+            res += s + "  ";
+        }
+        res = res.trim();
+        return res;
+    }
+
+    public static synchronized String getMLFQsSnapshot() {
+        String res = "";
+
+        for (int i = 0; i < PQs.size(); i++) {
+            List<String> snapshot = new ArrayList<>();
+            for (OS_Process p : PQs.get(i)) {
+                snapshot.add("P" + p.getP_id());
+            }
+
+            if (snapshot.isEmpty()) {
+                snapshot.add("(EMPTY)");
+            }
+
+            String temp = "";
+            for (String s : snapshot) {
+                temp += s + "  ";
+            }
+            temp = temp.trim();
+            temp = "PQ " + i + ": " + temp;
+            res += temp + "\n";
+        }
+
+        return res;
+    }
+
+    private static void handleReadyQueueChange() {
+        Dashboard.updateReadyQueueDisplay(getReadyQueueSnapshot(),getMLFQsSnapshot());
+        waitForStepIfEnabled();
+    }
+
+    private static void offerToReadyQueue(int processID) {
+        readyQueue.offer(processID);
+        // handleReadyQueueChange();
+    }
+
+    private static void removeFromReadyQueue(int processID) {
+        readyQueue.remove(processID);
+        // handleReadyQueueChange();
     }
 
     public static synchronized List<String> getBlockedQueueSnapshot() {
         List<String> snapshot = new ArrayList<>();
         snapshot.add("Input: " + formatQueue(waitingQueueInput));
         snapshot.add("Output: " + formatQueue(waitingQueueOutput));
-        snapshot.add("Memory: " + formatQueue(waitingQueueMemory));
+        snapshot.add("File: " + formatQueue(waitingQueueMemory));
         return snapshot;
     }
 
     private static String formatQueue(Queue<Integer> queue) {
         if (queue.isEmpty()) {
-            return "(empty)";
+            return "(EMPTY)";
         }
 
         StringBuilder builder = new StringBuilder();
@@ -221,7 +271,7 @@ public class Scheduler {
             return ProcessState.Ready.name();
         }
 
-        return "NotArrived";
+        return "Not Arrived";
     }
 
     public static int getCurrentProcessID() {
@@ -361,7 +411,7 @@ public class Scheduler {
         for (OS_Process process : processes) {
             if (process.getArrival_time() <= current_time && !process.is_in_ready_queue()
                     && process != current_process) {
-                readyQueue.offer(process.getP_id());
+                offerToReadyQueue(process.getP_id());
                 process.set_in_ready_queue(true);
                 ProcessController.setProcessState(process.getP_id(), ProcessState.Ready);
             }
@@ -385,7 +435,7 @@ public class Scheduler {
                 }
 
                 current_process = processes.get(index);
-                readyQueue.remove(current_process.getP_id());
+                removeFromReadyQueue(current_process.getP_id());
                 processes.remove(index);
                 ProcessController.setProcessState(current_process.getP_id(), ProcessState.Running);
 
@@ -404,7 +454,7 @@ public class Scheduler {
 
                     Memory.setPC(processId, currectPC + 1);
 
-                    current_process.set_Executed_time(current_process.getExecuted_time()+1);
+                    current_process.set_Executed_time(current_process.getExecuted_time() + 1);
                     current_time++;
                 }
 
@@ -442,20 +492,24 @@ public class Scheduler {
                     current_time++;
                     continue;
                 } else {
-                    RRQueue.offer(processes.get(0));
-                    readyQueue.offer(processes.get(0).getP_id());
 
-                    if (!Memory.tryLoadProcess(processes.get(0).getP_id(), false)) {
-                        System.out.println(
-                                "Error: For some reason I couldn't load process " + processes.get(0).getP_id());
+                    while (!processes.isEmpty() && processes.get(0).getArrival_time() <= current_time) {
+                        RRQueue.offer(processes.get(0));
+                        offerToReadyQueue(processes.get(0).getP_id());
+
+                        if (!Memory.tryLoadProcess(processes.get(0).getP_id(), false)) {
+                            System.out.println(
+                                    "Error: For some reason I couldn't load process " + processes.get(0).getP_id());
+                        }
+
+                        processes.remove(0);
+
                     }
-
-                    processes.remove(0);
                 }
             }
 
             current_process = RRQueue.poll();
-            readyQueue.remove(current_process.getP_id());
+            removeFromReadyQueue(current_process.getP_id());
             ProcessController.setProcessState(current_process.getP_id(), ProcessState.Running);
 
             int execution_time = Math.min(time_quantum,
@@ -493,7 +547,7 @@ public class Scheduler {
                     OS_Process unblockedProcess = getProcess(unblockedProcessID);
                     if (unblockedProcess != null) {
                         RRQueue.offer(unblockedProcess);
-                        readyQueue.offer(unblockedProcess.getP_id());
+                        offerToReadyQueue(unblockedProcess.getP_id());
                         unblockedProcess.setBlocked(false);
                         ProcessController.setProcessState(unblockedProcessID, ProcessState.Ready);
                     }
@@ -504,7 +558,7 @@ public class Scheduler {
                 current_process.set_Executed_time(current_process.getExecuted_time() + 1);
                 if (!processes.isEmpty() && processes.get(0).getArrival_time() <= current_time) {
                     RRQueue.offer(processes.get(0));
-                    readyQueue.offer(processes.get(0).getP_id());
+                    offerToReadyQueue(processes.get(0).getP_id());
                     Memory.tryLoadProcess(processes.get(0).getP_id(), false);
                     processes.remove(0);
                 }
@@ -518,7 +572,7 @@ public class Scheduler {
             }
             if (current_process.getExecuted_time() < current_process.getBurst_time()) {
                 RRQueue.offer(current_process);
-                readyQueue.offer(current_process.getP_id());
+                offerToReadyQueue(current_process.getP_id());
                 ProcessController.setProcessState(current_process.getP_id(), ProcessState.Ready);
             } else {
                 System.out.println("Process " + current_process.getP_id() + " completed at time " + current_time);
@@ -530,7 +584,7 @@ public class Scheduler {
 
     }
 
-    public static int getPQIndex(List<Queue<OS_Process>> PQs) {
+    public static int getPQIndex() {
         for (int i = 0; i < PQs.size(); i++) {
             if (!PQs.get(i).isEmpty()) {
                 return i;
@@ -542,14 +596,14 @@ public class Scheduler {
     public static void simulate_MLFQ(ArrayList<OS_Process> processes) {
         processes.sort((p1, p2) -> Integer.compare(p1.getArrival_time(), p2.getArrival_time()));
         current_time = 0;
+        PQs.clear();
 
-        List<Queue<OS_Process>> PQs = new ArrayList<>();
         for (int i = 0; i < 4; i++) {
             PQs.add(new LinkedList<>());
         }
 
-        while ((!processes.isEmpty() || getPQIndex(PQs) > -1) && !stopSimulationRequested) {
-            int pqIndex = getPQIndex(PQs);
+        while ((!processes.isEmpty() || getPQIndex() > -1) && !stopSimulationRequested) {
+            int pqIndex = getPQIndex();
             if (pqIndex == -1) {
                 if (processes.get(0).getArrival_time() > current_time) {
                     waitForStepIfEnabled();
@@ -559,21 +613,23 @@ public class Scheduler {
                     current_time++;
                     continue;
                 } else {
-                    PQs.get(0).offer(processes.get(0));
-                    readyQueue.offer(processes.get(0).getP_id());
-                    pqIndex = 0;
+                    while (!processes.isEmpty() && processes.get(0).getArrival_time() <= current_time) {
+                        PQs.get(0).offer(processes.get(0));
+                        offerToReadyQueue(processes.get(0).getP_id());
+                        pqIndex = 0;
 
-                    if (!Memory.tryLoadProcess(processes.get(0).getP_id(), false)) {
-                        System.out.println(
-                                "Error: For some reason I couldn't load process " + processes.get(0).getP_id());
+                        if (!Memory.tryLoadProcess(processes.get(0).getP_id(), false)) {
+                            System.out.println(
+                                    "Error: For some reason I couldn't load process " + processes.get(0).getP_id());
+                        }
+
+                        processes.remove(0);
                     }
-
-                    processes.remove(0);
                 }
             }
 
             current_process = PQs.get(pqIndex).poll();
-            readyQueue.remove(current_process.getP_id());
+            removeFromReadyQueue(current_process.getP_id());
             ProcessController.setProcessState(current_process.getP_id(), ProcessState.Running);
 
             int execution_time = Math.min(current_process.getBurst_time() - current_process.getExecuted_time(),
@@ -611,7 +667,7 @@ public class Scheduler {
                     OS_Process unblockedProcess = getProcess(unblockedProcessID);
                     if (unblockedProcess != null) {
                         PQs.get(0).offer(unblockedProcess);
-                        readyQueue.offer(unblockedProcess.getP_id());
+                        offerToReadyQueue(unblockedProcess.getP_id());
                         unblockedProcess.setBlocked(false);
                         ProcessController.setProcessState(unblockedProcessID, ProcessState.Ready);
                     }
@@ -622,7 +678,7 @@ public class Scheduler {
                 current_process.set_Executed_time(current_process.getExecuted_time() + 1);
                 if (!processes.isEmpty() && processes.get(0).getArrival_time() <= current_time) {
                     PQs.get(0).offer(processes.get(0));
-                    readyQueue.offer(processes.get(0).getP_id());
+                    offerToReadyQueue(processes.get(0).getP_id());
                     Memory.tryLoadProcess(processes.get(0).getP_id(), false);
                     processes.remove(0);
                 }
@@ -638,7 +694,7 @@ public class Scheduler {
                 if (pqIndex < 3)
                     pqIndex++;
                 PQs.get(pqIndex).offer(current_process);
-                readyQueue.offer(current_process.getP_id());
+                offerToReadyQueue(current_process.getP_id());
                 ProcessController.setProcessState(current_process.getP_id(), ProcessState.Ready);
             } else {
                 System.out.println("Process " + current_process.getP_id() + " completed at time " + current_time);

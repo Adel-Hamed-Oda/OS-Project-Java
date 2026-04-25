@@ -1,6 +1,13 @@
-
 import java.util.ArrayList;
 import java.util.List;
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.attribute.FileTime;
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
@@ -12,6 +19,7 @@ import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
+import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.util.Duration;
 
@@ -22,6 +30,8 @@ public class Dashboard extends Application {
     private final Label timeLabel = new Label("Time: 0");
     private final Label currentProcessLabel = new Label("Current Process: None");
     private final Label statusLabel = new Label("Status: Idle");
+    private final Label diskStatusLabel = new Label("Disk: empty disk file");
+    private final Button showDiskButton = new Button("Show Disk");
 
     private final TableView<MemoryRow> memoryTable = new TableView<>();
     private final ListView<String> processStatesList = new ListView<>();
@@ -54,6 +64,13 @@ public class Dashboard extends Application {
     private Timeline uiRefreshTimeline;
     private volatile boolean simulationCompleted = false;
     private volatile boolean simulationEndedByUser = false;
+    private final Path diskFilePath = Paths.get("disk.txt");
+    private boolean lastDiskExists = false;
+    private long lastDiskModifiedMillis = Long.MIN_VALUE;
+    private static final DateTimeFormatter DISK_TIME_FORMAT = DateTimeFormatter.ofPattern("HH:mm:ss");
+
+    // Add variable to keep track of the current instruction memory address
+    private volatile int currentInstructionIndex = -1;
 
     @Override
     public void start(Stage primaryStage) {
@@ -73,22 +90,29 @@ public class Dashboard extends Application {
 
         // Left Section: Queues and States
         VBox processBox = createCard("Process States", processStatesList);
+        processBox.setMinHeight(140);
+        processBox.setPrefHeight(140);
         VBox readyBox = createCard("Ready Queue", readyQueueList);
+        readyBox.setPrefHeight(120);
         VBox blockedBox = createCard("Blocked Queue", blockedQueueList);
+        blockedBox.setMinHeight(140);
+        blockedBox.setPrefHeight(140);
 
         VBox leftPane = new VBox(15, processBox, readyBox, blockedBox);
         leftPane.setPadding(new Insets(0, 10, 20, 20));
         leftPane.setPrefWidth(350);
-        VBox.setVgrow(processBox, Priority.ALWAYS);
+        VBox.setVgrow(processBox, Priority.NEVER);
+        VBox.setVgrow(readyBox, Priority.ALWAYS);
+        VBox.setVgrow(blockedBox, Priority.ALWAYS);
 
         // Center Section: Memory
         TableColumn<MemoryRow, String> addressColumn = new TableColumn<>("Address");
         addressColumn.setCellValueFactory(cellData -> new SimpleStringProperty(cellData.getValue().address()));
         addressColumn.setSortable(false);
         addressColumn.setReorderable(false);
-        addressColumn.setMinWidth(68);
-        addressColumn.setPrefWidth(72);
-        addressColumn.setMaxWidth(82);
+        addressColumn.setMinWidth(80);
+        addressColumn.setPrefWidth(90);
+        addressColumn.setMaxWidth(100);
 
         TableColumn<MemoryRow, String> nameColumn = new TableColumn<>("Name");
         nameColumn.setCellValueFactory(cellData -> new SimpleStringProperty(cellData.getValue().variable()));
@@ -116,7 +140,43 @@ public class Dashboard extends Application {
         memoryTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
         memoryTable.getStyleClass().add("memory-table");
 
-        addressColumn.setCellFactory(column -> createDefaultMemoryCell());
+        addressColumn.setCellFactory(column -> new TableCell<>() {
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) {
+                    setText(null);
+                    setStyle("");
+                    setTooltip(null);
+                    return;
+                }
+
+                int address = -1;
+                try {
+                    address = Integer.parseInt(item.trim());
+                } catch (NumberFormatException ignored) {
+                }
+
+                TableRow<MemoryRow> tableRow = getTableRow();
+                MemoryRow row = tableRow != null ? tableRow.getItem() : null;
+                String addressColor = "";
+                if (row != null && row.processId() != null && !row.processId().isEmpty()) {
+                    addressColor = getProcessColor(row.processId());
+                }
+
+                if (address != -1 && address == currentInstructionIndex) {
+                    setText("--> " + item);
+                    setStyle("-fx-font-weight: bold; -fx-text-fill: #e06c75;");
+                } else {
+                    setText(item);
+                    if (!addressColor.isEmpty()) {
+                        setStyle("-fx-text-fill: " + addressColor + ";");
+                    } else {
+                        setStyle("");
+                    }
+                }
+            }
+        });
         nameColumn.setCellFactory(column -> createDefaultMemoryCell());
         valueColumn.setCellFactory(column -> createDefaultMemoryCell());
 
@@ -141,6 +201,8 @@ public class Dashboard extends Application {
 
                 setText(item);
                 setTooltip(null);
+
+                // Default type colors
                 if ("Free".equals(item)) {
                     setStyle("-fx-text-fill: #4dabf7;");
                 } else if ("Variable".equals(item)) {
@@ -169,6 +231,16 @@ public class Dashboard extends Application {
         IOPane.setMaxHeight(30);
         IOPane.setOrientation(javafx.geometry.Orientation.HORIZONTAL);
         root.setBottom(IOPane);
+
+        File diskFile = new File(ProcessController.DISK_FILE_NAME);
+        if (diskFile.exists()) {
+            try {
+                diskFile.delete(); // Ensure we start with a clean slate
+                diskFile.createNewFile();
+            } catch (IOException e) {
+                System.out.println("Error creating disk file: " + e.getMessage());
+            }
+        }
 
         Scene scene = new Scene(root, 1400, 800);
         // Link the CSS file
@@ -201,6 +273,9 @@ public class Dashboard extends Application {
                 }
             }
         });
+
+        readyQueueList.setCellFactory(lv -> createQueueTextCell());
+        blockedQueueList.setCellFactory(lv -> createQueueTextCell());
 
         primaryStage.setTitle("Modern OS Scheduler Dashboard");
         primaryStage.setScene(scene);
@@ -243,6 +318,30 @@ public class Dashboard extends Application {
                 setText(item);
                 setStyle("");
                 setTooltip(null);
+            }
+        };
+    }
+
+    private ListCell<String> createQueueTextCell() {
+        return new ListCell<>() {
+            private final Label label = new Label();
+            private final HBox container = new HBox(10, label);
+
+            {
+                container.setAlignment(Pos.CENTER_LEFT);
+            }
+
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+
+                if (empty || item == null) {
+                    setGraphic(null);
+                    return;
+                }
+
+                label.setText(item);
+                setGraphic(container);
             }
         };
     }
@@ -339,6 +438,7 @@ public class Dashboard extends Application {
         stepButton.getStyleClass().add("button-secondary");
         runPauseButton.getStyleClass().add("button-secondary");
         endButton.getStyleClass().add("button-end");
+        showDiskButton.getStyleClass().add("button-secondary");
 
         startButton.setDisable(true);
         startButton.setOnAction(event -> startSimulation());
@@ -348,27 +448,37 @@ public class Dashboard extends Application {
         runPauseButton.setOnAction(event -> toggleRunPause());
         endButton.setDisable(true);
         endButton.setOnAction(event -> endSimulation());
+        showDiskButton.setOnAction(event -> showDiskPopup());
 
         timeLabel.getStyleClass().add("status-value");
         currentProcessLabel.getStyleClass().add("status-value");
+        diskStatusLabel.getStyleClass().add("status-value");
 
         HBox runtimeInfoGroup = new HBox(10,
                 new Label("TIME:"), timeLabel,
                 new Label("CURRENT PROCESS:"), currentProcessLabel);
         runtimeInfoGroup.setAlignment(Pos.CENTER_LEFT);
 
+        HBox diskGroup = new HBox(10,
+                diskStatusLabel, showDiskButton);
+        diskGroup.setAlignment(Pos.CENTER);
+
         HBox rightControlsGroup = new HBox(10,
-            startButton, endButton, stepButton, runPauseButton,
-            statusLabel);
+                startButton, endButton, stepButton, runPauseButton,
+                statusLabel);
         rightControlsGroup.setAlignment(Pos.CENTER_RIGHT);
 
-        Pane spacer = new Pane();
-        HBox.setHgrow(spacer, Priority.ALWAYS);
+        Pane leftSpacer = new Pane();
+        HBox.setHgrow(leftSpacer, Priority.ALWAYS);
+        Pane rightSpacer = new Pane();
+        HBox.setHgrow(rightSpacer, Priority.ALWAYS);
 
         HBox executionGroup = new HBox(10,
                 runtimeInfoGroup,
-            spacer,
-            rightControlsGroup);
+                leftSpacer,
+                diskGroup,
+                rightSpacer,
+                rightControlsGroup);
         executionGroup.setAlignment(Pos.CENTER_LEFT);
 
         Memory.initMemory();
@@ -398,7 +508,7 @@ public class Dashboard extends Application {
         for (int i = 0; i < availablePrograms.size(); i++) {
             String fileName = availablePrograms.get(i);
 
-            CheckBox includeProgram = new CheckBox(fileName);
+            CheckBox includeProgram = new CheckBox(canonicalProgramFileName(fileName));
             includeProgram.setSelected(false);
             includeProgram.getStyleClass().add("program-config-check");
 
@@ -453,6 +563,16 @@ public class Dashboard extends Application {
         panel.getStyleClass().add("program-config-panel");
         panel.setPadding(new Insets(12));
         return panel;
+    }
+
+    public static String canonicalProgramFileName(String fileName) {
+        if (fileName.contains("1"))
+            fileName = "Program 1";
+        else if (fileName.contains("2"))
+            fileName = "Program 2";
+        else if (fileName.contains("3"))
+            fileName = "Program 3";
+        return fileName;
     }
 
     private void updateQuantumUsability() {
@@ -680,16 +800,31 @@ public class Dashboard extends Application {
         String runningValue = runningProcessID == null ? "None" : "P" + runningProcessID;
         currentProcessLabel.setText("" + runningValue);
 
+        // Update the current running instruction index
+        if (runningProcessID != null) {
+            currentInstructionIndex = Memory.getCurrentInstructionIndex(runningProcessID);
+        } else {
+            currentInstructionIndex = -1;
+        }
+
         List<String> processStates = Scheduler.getProcessStateSnapshot();
         processStatesList.getItems().setAll(processStates);
 
-        readyQueueList.getItems().setAll(Scheduler.getReadyQueueSnapshot());
+        if (algorithmSelector.getValue() != null && algorithmSelector.getValue().equals("MLFQ"))
+            readyQueueList.getItems().setAll(Scheduler.getMLFQsSnapshot());
+        else
+            readyQueueList.getItems().setAll(Scheduler.getReadyQueueSnapshot());
         blockedQueueList.getItems().setAll(Scheduler.getBlockedQueueSnapshot());
 
         List<String> memorySnapshot = Memory.getMemorySnapshot();
         refreshMemoryTable(memorySnapshot);
 
+        // Ensure the table redraws the arrow even if the memory snapshot object didn't
+        // trigger an update
+        memoryTable.refresh();
+
         refreshInputWindowState();
+        updateDiskStatusLabel();
 
         if (simulationCompleted) {
             statusLabel.setText(simulationEndedByUser ? "Status: Terminated by User" : "Status: Completed");
@@ -715,6 +850,12 @@ public class Dashboard extends Application {
             inputField.setDisable(false);
             submitInputButton.setDisable(false);
 
+            // While waiting for user input, block starting a new simulation and
+            // pausing/running.
+            stepButton.setDisable(true);
+            runPauseButton.setDisable(true);
+            startButton.setDisable(true);
+
             statusLabel.setText("Status: Waiting for Input");
             Platform.runLater(inputField::requestFocus);
             return;
@@ -724,6 +865,15 @@ public class Dashboard extends Application {
         inputField.clear();
         inputField.setDisable(true);
         submitInputButton.setDisable(true);
+
+        // Restore button states after input is submitted.
+        if (!simulationCompleted && !endButton.isDisable()) {
+            runPauseButton.setDisable(false);
+            stepButton.setDisable(false);
+            startButton.setDisable(true);
+        } else {
+            updateStartButtonState();
+        }
 
         if (!simulationCompleted && startButton.isDisable()) {
             statusLabel.setText(Scheduler.isAutoRunEnabled() ? "Status: Running" : "Status: Ready to Step");
@@ -739,14 +889,26 @@ public class Dashboard extends Application {
         for (String line : memorySnapshot) {
             rows.add(parseMemoryRow(line));
         }
-        memoryTable.getItems().setAll(rows);
+
+        // Assign processIds
+        String currentProcessId = "";
+        List<MemoryRow> updatedRows = new ArrayList<>();
+        for (MemoryRow row : rows) {
+            if ("PCB".equals(row.type()) && "ID".equals(row.variable())) {
+                currentProcessId = row.value();
+            }
+            String pid = "Free".equals(row.type()) ? "" : currentProcessId;
+            updatedRows.add(new MemoryRow(row.address(), row.variable(), row.value(), row.type(), pid));
+        }
+
+        memoryTable.getItems().setAll(updatedRows);
         lastMemorySnapshot = new ArrayList<>(memorySnapshot);
     }
 
     private MemoryRow parseMemoryRow(String line) {
         int addressMarker = line.indexOf(':');
         if (addressMarker < 0) {
-            return new MemoryRow("", "", line, "");
+            return new MemoryRow("", "", line, "", "");
         }
 
         String addressPart = line.substring(0, addressMarker).replace("Address", "").trim();
@@ -756,17 +918,31 @@ public class Dashboard extends Application {
         int lastComma = payload.lastIndexOf(',');
 
         if (firstComma < 0 || lastComma < 0 || firstComma == lastComma) {
-            return new MemoryRow(addressPart, "", payload, "");
+            return new MemoryRow(addressPart, "", payload, "", "");
         }
 
         String variablePart = payload.substring(0, firstComma).trim();
         String valuePart = payload.substring(firstComma + 1, lastComma).trim();
         String typePart = payload.substring(lastComma + 1).trim();
 
-        return new MemoryRow(addressPart, variablePart, valuePart, typePart);
+        return new MemoryRow(addressPart, variablePart, valuePart, typePart, "");
     }
 
-    private record MemoryRow(String address, String variable, String value, String type) {
+    private record MemoryRow(String address, String variable, String value, String type, String processId) {
+    }
+
+    private String getProcessColor(String processId) {
+        if (processId == null || processId.isEmpty()) {
+            return ""; // No color for free or invalid
+        }
+        try {
+            int id = Integer.parseInt(processId);
+            String[] colors = { "#FFEAA7", "#DDA0DD", "#72f5dd", "#96CEB4", "#FFEAA7", "#DDA0DD", "#98D8C8", "#F7DC6F",
+                    "#BB8FCE", "#85C1E9" };
+            return colors[id % colors.length];
+        } catch (NumberFormatException e) {
+            return "";
+        }
     }
 
     private double calculateProgress(String item) {
@@ -802,6 +978,18 @@ public class Dashboard extends Application {
         Platform.runLater(() -> outputArea.appendText(message + System.lineSeparator()));
     }
 
+    public static void updateReadyQueueDisplay(String readyQueueSnapshot, String MLFQSnapshot) {
+        Dashboard dashboard = activeDashboard;
+        if (dashboard == null || readyQueueSnapshot == null) {
+            return;
+        }
+
+        if (dashboard.algorithmSelector.getValue() != null && dashboard.algorithmSelector.getValue().equals("MLFQ"))
+            Platform.runLater(() -> dashboard.readyQueueList.getItems().setAll(MLFQSnapshot));
+        else
+            Platform.runLater(() -> dashboard.readyQueueList.getItems().setAll(readyQueueSnapshot));
+    }
+
     private TextArea getOutputAreaForProcess(int processId) {
         String program = ProcessController.getProgramName(processId);
         return switch (program) {
@@ -816,6 +1004,68 @@ public class Dashboard extends Application {
         outputArea1.clear();
         outputArea2.clear();
         outputArea3.clear();
+    }
+
+    private void updateDiskStatusLabel() {
+        boolean exists = Files.exists(diskFilePath);
+        if (!exists) {
+            lastDiskExists = false;
+            lastDiskModifiedMillis = Long.MIN_VALUE;
+            diskStatusLabel.setText("Disk: empty disk file");
+            return;
+        }
+
+        try {
+            FileTime fileTime = Files.getLastModifiedTime(diskFilePath);
+            long currentModifiedMillis = fileTime.toMillis();
+
+            if (!lastDiskExists || currentModifiedMillis != lastDiskModifiedMillis) {
+                lastDiskExists = true;
+                lastDiskModifiedMillis = currentModifiedMillis;
+                String updatedAt = LocalTime.now().format(DISK_TIME_FORMAT);
+                diskStatusLabel.setText("Disk: updated " + updatedAt);
+            }
+        } catch (IOException ex) {
+            diskStatusLabel.setText("Disk: read error");
+        }
+    }
+
+    private void showDiskPopup() {
+        String content;
+        if (!Files.exists(diskFilePath)) {
+            content = "EMPTY";
+        } else {
+            try {
+                content = Files.readString(diskFilePath);
+                if (content == null || content.trim().isEmpty()) {
+                    content = "EMPTY";
+                }
+            } catch (IOException ex) {
+                content = "EMPTY";
+            }
+        }
+
+        Stage diskStage = new Stage();
+        diskStage.initModality(Modality.APPLICATION_MODAL);
+        diskStage.setTitle("Disk File Viewer");
+
+        TextArea diskContentArea = new TextArea(content);
+        diskContentArea.setEditable(false);
+        diskContentArea.setWrapText(true);
+        if (content.equals("empty")) {
+            diskContentArea.setStyle("-fx-text-fill: #9192947b; -fx-font-style: italic;");
+
+        }
+        diskContentArea.getStyleClass().add("output-text-area");
+
+        BorderPane root = new BorderPane(diskContentArea);
+        root.setPadding(new Insets(12));
+
+        Scene scene = new Scene(root, 520, 340);
+        scene.getStylesheets().add(getClass().getResource("style.css").toExternalForm());
+
+        diskStage.setScene(scene);
+        diskStage.show();
     }
 
     public static void main(String[] args) {
