@@ -42,6 +42,52 @@
     -fx-opacity: 0.8;
 }
 
+.program-config-panel {
+    -fx-background-color: rgba(43, 48, 53, 0.7);
+    -fx-background-radius: 12;
+    -fx-border-color: rgba(255, 255, 255, 0.1);
+    -fx-border-radius: 12;
+    -fx-border-width: 1;
+}
+
+.scheduling-panel {
+    -fx-background-color: rgba(43, 48, 53, 0.7);
+    -fx-background-radius: 12;
+    -fx-border-color: rgba(255, 255, 255, 0.1);
+    -fx-border-radius: 12;
+    -fx-border-width: 1;
+}
+
+.program-config-row {
+    -fx-alignment: center-left;
+}
+
+.program-config-cell {
+    -fx-background-color: rgba(33, 37, 41, 0.55);
+    -fx-background-radius: 8;
+    -fx-border-color: rgba(255, 255, 255, 0.08);
+    -fx-border-radius: 8;
+    -fx-border-width: 1;
+}
+
+.program-config-header {
+    -fx-text-fill: #dee2e6;
+    -fx-font-size: 12px;
+}
+
+.program-config-row-title {
+    -fx-min-width: 140;
+    -fx-pref-width: 140;
+}
+
+.program-config-check {
+    -fx-text-fill: #e9ecef;
+}
+
+.program-arrival-field {
+    -fx-pref-width: 90;
+}
+
 /* Inputs & Lists */
 .list-view,
 .text-area {
@@ -147,8 +193,64 @@
     -fx-text-fill: white;
 }
 
+.button-end {
+    -fx-background-color: #c94f4f;
+    -fx-text-fill: white;
+}
+
+.button-end:hover {
+    -fx-background-color: #e06767;
+}
+
 .input-card {
     -fx-background-color: #343a40;
     -fx-border-color: #4dabf7;
     -fx-border-width: 2 0 0 0;
+}
+
+.output-section {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+}
+
+.output-sections {
+    -fx-alignment: center-left;
+}
+
+.output-section-title {
+    -fx-text-fill: #dee2e6;
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-opacity: 0.85;
+}
+
+.output-text-area {
+    -fx-control-inner-background: #2b3035;
+    -fx-text-fill: #e9ecef;
+    -fx-font-family: "Consolas";
+    -fx-font-size: 12px;
+    -fx-border-color: #495057;
+    -fx-border-radius: 6;
+    -fx-background-radius: 6;
+    -fx-border-width: 5;
+    -fx-background-color: #ffffff;
+
+}
+
+/* Remove the default SplitPane borders for a cleaner look */
+.split-pane {
+    -fx-background-color: transparent;
+    -fx-padding: 0;
+}
+
+.split-pane-divider {
+    -fx-padding: 2 0 2 0;
+    -fx-background-color: #343a40;
+}
+
+.io-split-pane .split-pane-divider {
+    -fx-padding: 2 1 2 1;
+    -fx-background-color: #4b5263;
+    -fx-border-color: #4dabf7;
+    -fx-border-width: 0 1 0 1;
 }
