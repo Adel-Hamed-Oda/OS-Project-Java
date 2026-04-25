@@ -14,7 +14,7 @@ public class ProcessController {
 
     public static String DISK_FILE_NAME = "Disk.txt";
 
-    private static ArrayList<String> programMap = new ArrayList<>();
+    private static final ArrayList<String> programMap = new ArrayList<>();
 
     public static void initProcessController() {
         instructionTable.clear();

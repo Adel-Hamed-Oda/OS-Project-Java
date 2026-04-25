@@ -55,6 +55,9 @@ public class Dashboard extends Application {
     private volatile boolean simulationCompleted = false;
     private volatile boolean simulationEndedByUser = false;
 
+    // Add variable to keep track of the current instruction memory address
+    private volatile int currentInstructionIndex = -1;
+
     @Override
     public void start(Stage primaryStage) {
         activeDashboard = this;
@@ -86,9 +89,9 @@ public class Dashboard extends Application {
         addressColumn.setCellValueFactory(cellData -> new SimpleStringProperty(cellData.getValue().address()));
         addressColumn.setSortable(false);
         addressColumn.setReorderable(false);
-        addressColumn.setMinWidth(68);
-        addressColumn.setPrefWidth(72);
-        addressColumn.setMaxWidth(82);
+        addressColumn.setMinWidth(80);
+        addressColumn.setPrefWidth(90);
+        addressColumn.setMaxWidth(100);
 
         TableColumn<MemoryRow, String> nameColumn = new TableColumn<>("Name");
         nameColumn.setCellValueFactory(cellData -> new SimpleStringProperty(cellData.getValue().variable()));
@@ -116,7 +119,32 @@ public class Dashboard extends Application {
         memoryTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
         memoryTable.getStyleClass().add("memory-table");
 
-        addressColumn.setCellFactory(column -> createDefaultMemoryCell());
+        addressColumn.setCellFactory(column -> new TableCell<>() {
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) {
+                    setText(null);
+                    setStyle("");
+                    setTooltip(null);
+                    return;
+                }
+
+                int address = -1;
+                try {
+                    address = Integer.parseInt(item.trim());
+                } catch (NumberFormatException ignored) {
+                }
+
+                if (address != -1 && address == currentInstructionIndex) {
+                    setText("--> " + item);
+                    setStyle("-fx-font-weight: bold; -fx-text-fill: #e06c75;");
+                } else {
+                    setText(item);
+                    setStyle("");
+                }
+            }
+        });
         nameColumn.setCellFactory(column -> createDefaultMemoryCell());
         valueColumn.setCellFactory(column -> createDefaultMemoryCell());
 
@@ -358,8 +386,8 @@ public class Dashboard extends Application {
         runtimeInfoGroup.setAlignment(Pos.CENTER_LEFT);
 
         HBox rightControlsGroup = new HBox(10,
-            startButton, endButton, stepButton, runPauseButton,
-            statusLabel);
+                startButton, endButton, stepButton, runPauseButton,
+                statusLabel);
         rightControlsGroup.setAlignment(Pos.CENTER_RIGHT);
 
         Pane spacer = new Pane();
@@ -367,8 +395,8 @@ public class Dashboard extends Application {
 
         HBox executionGroup = new HBox(10,
                 runtimeInfoGroup,
-            spacer,
-            rightControlsGroup);
+                spacer,
+                rightControlsGroup);
         executionGroup.setAlignment(Pos.CENTER_LEFT);
 
         Memory.initMemory();
@@ -680,6 +708,13 @@ public class Dashboard extends Application {
         String runningValue = runningProcessID == null ? "None" : "P" + runningProcessID;
         currentProcessLabel.setText("" + runningValue);
 
+        // Update the current running instruction index
+        if (runningProcessID != null) {
+            currentInstructionIndex = Memory.getCurrentInstructionIndex(runningProcessID);
+        } else {
+            currentInstructionIndex = -1;
+        }
+
         List<String> processStates = Scheduler.getProcessStateSnapshot();
         processStatesList.getItems().setAll(processStates);
 
@@ -688,6 +723,10 @@ public class Dashboard extends Application {
 
         List<String> memorySnapshot = Memory.getMemorySnapshot();
         refreshMemoryTable(memorySnapshot);
+
+        // Ensure the table redraws the arrow even if the memory snapshot object didn't
+        // trigger an update
+        memoryTable.refresh();
 
         refreshInputWindowState();
 
