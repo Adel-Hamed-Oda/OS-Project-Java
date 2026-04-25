@@ -30,7 +30,8 @@ public class Dashboard extends Application {
     private final Label timeLabel = new Label("Time: 0");
     private final Label currentProcessLabel = new Label("Current Process: None");
     private final Label statusLabel = new Label("Status: Idle");
-    private final Label diskStatusLabel = new Label("Disk: empty disk file");
+    private final Label diskStatusLabel = new Label("DISK: ");
+    private final Label diskStatusLabelValue = new Label("empty disk file");
     private final Button showDiskButton = new Button("Show Disk");
 
     private final TableView<MemoryRow> memoryTable = new TableView<>();
@@ -39,6 +40,7 @@ public class Dashboard extends Application {
     private final ListView<String> blockedQueueList = new ListView<>();
 
     private final ComboBox<String> algorithmSelector = new ComboBox<>();
+    private final CheckBox displayAfterEveryChangeCheck = new CheckBox("Display every change");
     private final Label quantumLabel = new Label("Quantum Time:");
     private final TextField rrQuantumField = new TextField("");
     private final Button startButton = new Button("Start Simulation");
@@ -79,10 +81,11 @@ public class Dashboard extends Application {
         BorderPane root = new BorderPane();
         root.getStyleClass().add("root-pane");
 
-        // Top Section: Program Configuration and Scheduling
-        SplitPane topPane = new SplitPane(buildProgramConfigPanel(), buildSchedulingPanel());
+        // Top Section: Program Configuration, Scheduling, and Display Options
+        SplitPane topPane = new SplitPane(buildProgramConfigPanel(), buildSchedulingPanel(),
+                buildDisplayOptionsPanel());
         topPane.getStyleClass().add("top-split-pane");
-        topPane.setDividerPositions(0.58);
+        topPane.setDividerPositions(0.5, 0.8);
 
         VBox topContainer = new VBox(15, topPane, buildExecutionPanel());
         topContainer.setPadding(new Insets(20));
@@ -215,7 +218,7 @@ public class Dashboard extends Application {
             }
         });
 
-        VBox memoryBox = createCard("System Memory Map", memoryTable);
+        VBox memoryBox = createCard("Memory Map", memoryTable);
         memoryBox.setPadding(new Insets(0, 20, 20, 10));
 
         SplitPane body = new SplitPane(leftPane, memoryBox);
@@ -241,6 +244,7 @@ public class Dashboard extends Application {
                 System.out.println("Error creating disk file: " + e.getMessage());
             }
         }
+
 
         Scene scene = new Scene(root, 1400, 800);
         // Link the CSS file
@@ -277,7 +281,7 @@ public class Dashboard extends Application {
         readyQueueList.setCellFactory(lv -> createQueueTextCell());
         blockedQueueList.setCellFactory(lv -> createQueueTextCell());
 
-        primaryStage.setTitle("Modern OS Scheduler Dashboard");
+        primaryStage.setTitle("OS SIMULATOR");
         primaryStage.setScene(scene);
         primaryStage.show();
 
@@ -360,7 +364,7 @@ public class Dashboard extends Application {
         submitInputButton.setOnAction(event -> submitInputFromGUI());
         inputField.setOnAction(event -> submitInputFromGUI());
 
-        VBox container = new VBox(10, new Label("USER INPUT REQUESTED"), inputRequestLabel, inputRow);
+        VBox container = new VBox(10, new Label("INPUT PANEL"), inputRequestLabel, inputRow);
         container.getStyleClass().add("input-card");
         container.setPadding(new Insets(20));
         container.setVisible(true);
@@ -416,10 +420,15 @@ public class Dashboard extends Application {
         Label header = new Label("SCHEDULING CONFIGURATION");
         header.getStyleClass().add("card-header");
 
-        HBox schedulerConfigGroup = new HBox(10,
-                new Label("Scheduling Algorithm:"), algorithmSelector,
-                quantumLabel, rrQuantumField);
-        schedulerConfigGroup.setAlignment(Pos.CENTER_LEFT);
+        HBox algorithmRow = new HBox(10,
+                new Label("Scheduling Algorithm:"),
+                algorithmSelector);
+        algorithmRow.setAlignment(Pos.CENTER_LEFT);
+
+        HBox quantumRow = new HBox(10,
+                quantumLabel,
+                rrQuantumField);
+        quantumRow.setAlignment(Pos.CENTER_LEFT);
 
         quantumLabel.setDisable(true);
         rrQuantumField.setDisable(true);
@@ -427,9 +436,32 @@ public class Dashboard extends Application {
         updateQuantumUsability();
         updateStartButtonState();
 
-        VBox panel = new VBox(8, header, schedulerConfigGroup);
+        VBox panel = new VBox(8, header, algorithmRow, quantumRow);
         panel.getStyleClass().add("scheduling-panel");
         panel.setPadding(new Insets(12));
+        return panel;
+    }
+
+    private VBox buildDisplayOptionsPanel() {
+        Label header = new Label("DISPLAY OPTIONS");
+        header.getStyleClass().add("card-header");
+
+        displayAfterEveryChangeCheck.getStyleClass().add("program-config-check");
+        displayAfterEveryChangeCheck.setTooltip(
+                new Tooltip("When enabled, display updates after every change not just every clock cycle."));
+
+        HBox centeredOptionRow = new HBox(displayAfterEveryChangeCheck);
+        centeredOptionRow.setAlignment(Pos.CENTER_LEFT);
+
+        Region topSpacer = new Region();
+        Region bottomSpacer = new Region();
+        VBox.setVgrow(topSpacer, Priority.ALWAYS);
+        VBox.setVgrow(bottomSpacer, Priority.ALWAYS);
+
+        VBox panel = new VBox(8, header, topSpacer, centeredOptionRow, bottomSpacer);
+        panel.getStyleClass().add("scheduling-panel");
+        panel.setPadding(new Insets(12));
+        panel.setAlignment(Pos.TOP_LEFT);
         return panel;
     }
 
@@ -452,7 +484,8 @@ public class Dashboard extends Application {
 
         timeLabel.getStyleClass().add("status-value");
         currentProcessLabel.getStyleClass().add("status-value");
-        diskStatusLabel.getStyleClass().add("status-value");
+        diskStatusLabel.getStyleClass().add("label-value");
+        diskStatusLabelValue.getStyleClass().add("status-value");
 
         HBox runtimeInfoGroup = new HBox(10,
                 new Label("TIME:"), timeLabel,
@@ -460,7 +493,7 @@ public class Dashboard extends Application {
         runtimeInfoGroup.setAlignment(Pos.CENTER_LEFT);
 
         HBox diskGroup = new HBox(10,
-                diskStatusLabel, showDiskButton);
+                diskStatusLabel, diskStatusLabelValue, showDiskButton);
         diskGroup.setAlignment(Pos.CENTER);
 
         HBox rightControlsGroup = new HBox(10,
@@ -654,6 +687,8 @@ public class Dashboard extends Application {
             checkBox.setDisable(disabled);
             textField.setDisable(disabled || !checkBox.isSelected());
         }
+
+        displayAfterEveryChangeCheck.setDisable(disabled);
     }
 
     private void resetConfigurationSelections() {
@@ -719,6 +754,17 @@ public class Dashboard extends Application {
         statusLabel.setText("Status: Ready to Step");
 
         clearOutPutPanels();
+
+        File diskFile = new File(ProcessController.DISK_FILE_NAME);
+        if (diskFile.exists()) {
+            try {
+                diskFile.delete(); // Ensure we start with a clean slate
+                diskFile.createNewFile();
+            } catch (IOException e) {
+                System.out.println("Error creating disk file: " + e.getMessage());
+            }
+        }
+
 
         Scheduler.initializeSimulation();
         Scheduler.enableStepMode();
@@ -937,7 +983,7 @@ public class Dashboard extends Application {
         }
         try {
             int id = Integer.parseInt(processId);
-            String[] colors = { "#FFEAA7", "#DDA0DD", "#72f5dd", "#96CEB4", "#FFEAA7", "#DDA0DD", "#98D8C8", "#F7DC6F",
+            String[] colors = { "#e3ee4c", "#f03ee2", "#25c10a", "#96CEB4", "#FFEAA7", "#DDA0DD", "#98D8C8", "#F7DC6F",
                     "#BB8FCE", "#85C1E9" };
             return colors[id % colors.length];
         } catch (NumberFormatException e) {
@@ -1011,7 +1057,7 @@ public class Dashboard extends Application {
         if (!exists) {
             lastDiskExists = false;
             lastDiskModifiedMillis = Long.MIN_VALUE;
-            diskStatusLabel.setText("Disk: empty disk file");
+            diskStatusLabelValue.setText("empty disk file");
             return;
         }
 
@@ -1023,10 +1069,10 @@ public class Dashboard extends Application {
                 lastDiskExists = true;
                 lastDiskModifiedMillis = currentModifiedMillis;
                 String updatedAt = LocalTime.now().format(DISK_TIME_FORMAT);
-                diskStatusLabel.setText("Disk: updated " + updatedAt);
+                diskStatusLabelValue.setText("updated " + updatedAt);
             }
         } catch (IOException ex) {
-            diskStatusLabel.setText("Disk: read error");
+            diskStatusLabelValue.setText("read error");
         }
     }
 
@@ -1047,7 +1093,7 @@ public class Dashboard extends Application {
 
         Stage diskStage = new Stage();
         diskStage.initModality(Modality.APPLICATION_MODAL);
-        diskStage.setTitle("Disk File Viewer");
+        diskStage.setTitle("DISK FILE VIEWER");
 
         TextArea diskContentArea = new TextArea(content);
         diskContentArea.setEditable(false);
@@ -1066,6 +1112,11 @@ public class Dashboard extends Application {
 
         diskStage.setScene(scene);
         diskStage.show();
+    }
+
+    public static boolean isDisplayAfterEveryChange() {
+        Dashboard dashboard = activeDashboard;
+        return dashboard != null && dashboard.displayAfterEveryChangeCheck.isSelected();
     }
 
     public static void main(String[] args) {

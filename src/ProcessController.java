@@ -18,6 +18,7 @@ public class ProcessController {
 
     public static void initProcessController() {
         instructionTable.clear();
+        programMap.clear();
 
         File diskFile = new File(DISK_FILE_NAME);
         if (!diskFile.exists()) {
