@@ -1,0 +1,18 @@
+PROCESS_START:2
+ID,2,PCB
+state,Ready,PCB
+PC,1,PCB
+Bounds,14-29,PCB
+,,Variable
+,,Variable
+,,Variable
+,semWait userInput,Instruction
+,assign a input,Instruction
+,semSignal userInput,Instruction
+,semWait file,Instruction
+,assign b readFile a,Instruction
+,semSignal file,Instruction
+,semWait userOutput,Instruction
+,print b,Instruction
+,semSignal userOutput,Instruction
+PROCESS_END:2

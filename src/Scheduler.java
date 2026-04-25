@@ -9,6 +9,7 @@ public class Scheduler {
     private static boolean stepModeEnabled = false;
     private static boolean autoRunEnabled = false;
     private static int pendingStepCount = 0;
+    private static volatile boolean stopSimulationRequested = false;
 
     public static Queue<Integer> readyQueue = new LinkedList<>(); // should things from the waiting queue return to the
                                                                   // beginning or the end of the queue?
@@ -37,6 +38,7 @@ public class Scheduler {
         current_time = 0;
         current_process = null;
         unblockedProcessID = -1;
+        stopSimulationRequested = false;
         disableStepMode();
 
         ProcessController.initProcessController();
@@ -99,6 +101,16 @@ public class Scheduler {
             pendingStepCount++;
             STEP_LOCK.notifyAll();
         }
+    }
+
+    public static void requestSimulationStop() {
+        stopSimulationRequested = true;
+        current_process = null;
+        disableStepMode();
+    }
+
+    public static boolean isStopRequested() {
+        return stopSimulationRequested;
     }
 
     private static void waitForStepIfEnabled() {
@@ -360,11 +372,11 @@ public class Scheduler {
         processes.sort((p1, p2) -> Integer.compare(p1.getArrival_time(), p2.getArrival_time()));
         current_time = 0;
 
-        while (!processes.isEmpty()) {
+        while (!processes.isEmpty() && !stopSimulationRequested) {
             updateReadyQueue(processes);
             int index = get_HRRN(processes);
-            int processId = processes.get(index).getP_id();
             if (index != -1) {
+                int processId = processes.get(index).getP_id();
                 // This line makes the process NEW after it was ready and in description , we
                 // only need ready.
                 if (!Memory.tryLoadProcess(processId, false)) {
@@ -379,6 +391,9 @@ public class Scheduler {
 
                 for (int i = 0; i < current_process.getBurst_time(); i++) {
                     waitForStepIfEnabled();
+                    if (stopSimulationRequested) {
+                        break;
+                    }
                     updateReadyQueue(processes);
                     Memory.printProcess(processId);
                     System.out.println("Process " + current_process.getP_id() + " is running at time " + current_time);
@@ -393,12 +408,20 @@ public class Scheduler {
                     current_time++;
                 }
 
+                if (stopSimulationRequested) {
+                    current_process = null;
+                    break;
+                }
+
                 ProcessController.setProcessState(current_process.getP_id(), ProcessState.Terminated);
 
                 System.out.println("Process " + current_process.getP_id() + " completed at time " + current_time);
                 current_process = null;
             } else {
                 waitForStepIfEnabled();
+                if (stopSimulationRequested) {
+                    break;
+                }
                 current_time++;
             }
         }
@@ -409,10 +432,13 @@ public class Scheduler {
         current_time = 0;
         Queue<OS_Process> RRQueue = new LinkedList<>();
 
-        while (!processes.isEmpty() || !RRQueue.isEmpty()) {
+        while ((!processes.isEmpty() || !RRQueue.isEmpty()) && !stopSimulationRequested) {
             if (RRQueue.isEmpty()) {
                 if (processes.get(0).getArrival_time() > current_time) {
                     waitForStepIfEnabled();
+                    if (stopSimulationRequested) {
+                        break;
+                    }
                     current_time++;
                     continue;
                 } else {
@@ -436,11 +462,18 @@ public class Scheduler {
                     current_process.getBurst_time() - current_process.getExecuted_time());
 
             for (int i = 0; i < execution_time; i++) {
+                if (stopSimulationRequested) {
+                    break;
+                }
+
                 if (current_process.isBlocked() == true) {
                     break;
                 }
 
                 waitForStepIfEnabled();
+                if (stopSimulationRequested) {
+                    break;
+                }
 
                 if (!Memory.processExistsInMemory(current_process.getP_id())) {
                     Memory.tryLoadProcess(current_process.getP_id(), true);
@@ -475,6 +508,10 @@ public class Scheduler {
                     Memory.tryLoadProcess(processes.get(0).getP_id(), false);
                     processes.remove(0);
                 }
+            }
+            if (stopSimulationRequested) {
+                current_process = null;
+                break;
             }
             if (current_process.isBlocked() == true) {
                 continue;
@@ -511,11 +548,14 @@ public class Scheduler {
             PQs.add(new LinkedList<>());
         }
 
-        while (!processes.isEmpty() || getPQIndex(PQs) > -1) {
+        while ((!processes.isEmpty() || getPQIndex(PQs) > -1) && !stopSimulationRequested) {
             int pqIndex = getPQIndex(PQs);
             if (pqIndex == -1) {
                 if (processes.get(0).getArrival_time() > current_time) {
                     waitForStepIfEnabled();
+                    if (stopSimulationRequested) {
+                        break;
+                    }
                     current_time++;
                     continue;
                 } else {
@@ -540,11 +580,18 @@ public class Scheduler {
                     (int) Math.pow(2, pqIndex));
 
             for (int i = 0; i < execution_time; i++) {
+                if (stopSimulationRequested) {
+                    break;
+                }
+
                 if (current_process.isBlocked() == true) {
                     break;
                 }
 
                 waitForStepIfEnabled();
+                if (stopSimulationRequested) {
+                    break;
+                }
 
                 if (!Memory.processExistsInMemory(current_process.getP_id())) {
                     Memory.tryLoadProcess(current_process.getP_id(), true);
@@ -579,6 +626,10 @@ public class Scheduler {
                     Memory.tryLoadProcess(processes.get(0).getP_id(), false);
                     processes.remove(0);
                 }
+            }
+            if (stopSimulationRequested) {
+                current_process = null;
+                break;
             }
             if (current_process.isBlocked() == true) {
                 continue;

@@ -14,6 +14,8 @@ public class ProcessController {
 
     public static String DISK_FILE_NAME = "Disk.txt";
 
+    private static ArrayList<String> programMap = new ArrayList<>();
+
     public static void initProcessController() {
         instructionTable.clear();
 
@@ -30,7 +32,7 @@ public class ProcessController {
 
     public static void AddNewProcess(String fileName) {
         FileReader reader;
-        
+
         try {
             reader = new FileReader(fileName);
         } catch (FileNotFoundException e) {
@@ -49,6 +51,7 @@ public class ProcessController {
                 instructions = java.util.Arrays.copyOf(instructions, instructions.length + 1);
                 instructions[instructions.length - 1] = line;
             }
+            programMap.add(fileName);
         } catch (IOException e) {
             System.out.println("Error reading file: " + e.getMessage());
         }
@@ -65,9 +68,14 @@ public class ProcessController {
         return instructions != null ? instructions.length : 0;
     }
 
+    public static String getProgramName(int processID) {
+        return programMap.get(processID);
+    }
+
     public static boolean contextExists(int processID) {
         File diskFile = new File(DISK_FILE_NAME);
-        if (!diskFile.exists()) return false;
+        if (!diskFile.exists())
+            return false;
 
         try (BufferedReader br = new BufferedReader(new FileReader(diskFile))) {
             String line;
@@ -84,7 +92,8 @@ public class ProcessController {
 
     public static void deleteContext(int processID) {
         File diskFile = new File(DISK_FILE_NAME);
-        if (!diskFile.exists()) return;
+        if (!diskFile.exists())
+            return;
 
         try {
             List<String> allLines = Files.readAllLines(diskFile.toPath());
@@ -100,7 +109,7 @@ public class ProcessController {
                     skipping = false;
                     continue;
                 }
-                
+
                 if (!skipping) {
                     updatedLines.add(line);
                 }
@@ -134,7 +143,8 @@ public class ProcessController {
 
     public static String[] loadContext(int processID) {
         File diskFile = new File(DISK_FILE_NAME);
-        if (!diskFile.exists()) return null;
+        if (!diskFile.exists())
+            return null;
 
         List<String> contextLines = new ArrayList<>();
         boolean reading = false;
@@ -161,7 +171,7 @@ public class ProcessController {
         if (contextLines.isEmpty()) {
             return null; // Process not found
         }
-        
+
         return contextLines.toArray(String[]::new);
     }
 
@@ -179,20 +189,21 @@ public class ProcessController {
                         if (lines.get(i).equals("PROCESS_START:" + processID)) {
                             // Ensure we don't go out of bounds just in case of file corruption
                             if (i + 2 < lines.size()) {
-                                lines.set(i + 2, "state," + state.name() + ",PCB"); 
+                                lines.set(i + 2, "state," + state.name() + ",PCB");
                             }
-                            break; 
+                            break;
                         }
                     }
 
                     // Rewrite the file with the modified state line
                     Files.write(diskFile.toPath(), lines);
-
                 } catch (IOException e) {
-                    System.out.println("Warning: Failed to update state in disk file for process " + processID + ": " + e.getMessage());
+                    System.out.println("Warning: Failed to update state in disk file for process " + processID + ": "
+                            + e.getMessage());
                 }
             } else {
-                System.out.println("Warning: Cannot set state to " + state + " for process " + processID + " because it is not in memory or disk.");
+                System.out.println("Warning: Cannot set state to " + state + " for process " + processID
+                        + " because it is not in memory or disk.");
             }
         }
     }

@@ -16,7 +16,7 @@ public class Memory {
     // only used when the process is new
     public static void allocateProcess(int processId) throws NotEnoughMemoryException {
         String[] instructions = ProcessController.getInstructions(processId);
-        
+
         int requiredSpace = instructions.length + 3 + 4; // + 3 for variables + 4 for PCB
 
         int startIndex = findFreeSpace(requiredSpace);
@@ -181,6 +181,7 @@ public class Memory {
         }
 
         ProcessController.saveContext(processId, lines);
+
         compactMemory();
     }
 
@@ -195,7 +196,6 @@ public class Memory {
         if (lowerBoundary == -1) {
             throw new NotEnoughMemoryException("Not enough memory to load context for process " + processId);
         }
-
         for (int i = lowerBoundary; i < lowerBoundary + lines.length; i++) {
             memory[i].fromString(lines[i - lowerBoundary]);
         }
@@ -203,7 +203,8 @@ public class Memory {
         updateProcessBounds(lowerBoundary);
     }
 
-    // Improved trySwapOut handles multiple processes, prioritizes victims based on state,
+    // Improved trySwapOut handles multiple processes, prioritizes victims based on
+    // state,
     // and completely discards terminated processes instead of saving them to disk.
     public static void swapOut(int requiredSpace) {
         while (getAmountOfFreeSpace() < requiredSpace) {
@@ -215,7 +216,7 @@ public class Memory {
             }
 
             ProcessState state = getProcessState(victimId);
-            
+
             // If the process is terminated, we don't need to save its context.
             // Just wipe it from memory and delete its leftover text file (if any).
             if (state != null && state.name().equals("Terminated")) {
@@ -233,27 +234,28 @@ public class Memory {
         }
     }
 
-    //#region Swap-Out Helper Methods
+    // #region Swap-Out Helper Methods
 
     // Helper method to prioritize which process to kick out of memory.
     // Priorities: 1. Terminated, 2. Blocked/Waiting, 3. Ready, 4. New.
     // It avoids swapping out a "Running" process.
     private static int selectVictimProcess() {
         int victimId = findProcessByState("Terminated");
-        
+
         if (victimId == -1) {
             victimId = findProcessByState("Blocked"); // Change to "Waiting" if that's what your enum uses
         }
-        
+
         if (victimId == -1) {
             victimId = findProcessByState("Ready");
         }
-        
+
         if (victimId == -1) {
             victimId = findProcessByState("New");
         }
 
-        // Fallback: Just grab the first process we can find that isn't currently "Running"
+        // Fallback: Just grab the first process we can find that isn't currently
+        // "Running"
         if (victimId == -1) {
             for (int i = 0; i < MEMORY_SIZE; i++) {
                 if (memory[i].type == CellType.PCB && isPCBIdField(memory[i].name)) {
@@ -266,7 +268,8 @@ public class Memory {
             }
         }
 
-        return victimId; // Return a random ID that likely doesn't exist to trigger the "no suitable process" case
+        return victimId; // Return a random ID that likely doesn't exist to trigger the "no suitable
+                         // process" case
     }
 
     // Searches memory for a process that matches the specific state name
@@ -275,7 +278,7 @@ public class Memory {
             if (memory[i].type == CellType.PCB && isPCBIdField(memory[i].name)) {
                 int processId = Integer.parseInt(memory[i].value);
                 ProcessState state = getProcessState(processId);
-                
+
                 if (state != null && state.name().equalsIgnoreCase(targetStateName)) {
                     return processId;
                 }
@@ -302,7 +305,7 @@ public class Memory {
         }
     }
 
-    //#endregion
+    // #endregion
 
     public static boolean tryLoadProcess(int processId, boolean tryFindingContext) {
         if (processExistsInMemory(processId)) {
@@ -314,7 +317,6 @@ public class Memory {
 
         // Check if we should load an existing context or allocate a new one
         boolean hasContext = tryFindingContext && ProcessController.contextExists(processId);
-
         try {
             if (hasContext) {
                 loadContext(processId);
@@ -324,16 +326,16 @@ public class Memory {
             }
 
             return true; // Success on the first try
-            
+
         } catch (NotEnoughMemoryException e) {
             System.out.println("Warning: Not enough memory to allocate process " + processId);
             // Memory is full! Calculate how much space we need to free up.
             // (Instructions length + 3 variables + 4 PCB slots = length + 7)
             int requiredSpace = ProcessController.getInstructions(processId).length + 7;
-            
+
             // Attempt to swap out an older process to free up space
             swapOut(requiredSpace);
-            
+
             // Try loading/allocating one more time now that (hopefully) space is freed
             try {
                 if (hasContext) {
@@ -344,7 +346,7 @@ public class Memory {
                 }
 
                 return true; // Success on the second try
-                
+
             } catch (NotEnoughMemoryException ex) {
                 // If it fails again, we are completely out of options
                 System.out.println("Error: Not enough memory to allocate process " + processId);
@@ -353,7 +355,7 @@ public class Memory {
         }
     }
 
-    //#region Utility Methods
+    // #region Utility Methods
 
     public static void printMemory() {
         System.out.println("=== Current Memory State: =======================================");
@@ -407,7 +409,8 @@ public class Memory {
             }
         }
 
-        // Scan for every process's id cell and update its bounds to reflect the new position.
+        // Scan for every process's id cell and update its bounds to reflect the new
+        // position.
         for (int i = 0; i < MEMORY_SIZE; i++) {
             if (memory[i].type == CellType.PCB && isPCBIdField(memory[i].name)) {
                 updateProcessBounds(i);
@@ -433,36 +436,34 @@ public class Memory {
 
     public static boolean processExistsInMemory(int processId) {
         for (int i = 0; i < MEMORY_SIZE; i++) {
-            if (memory[i].type == CellType.PCB && 
-                isPCBIdField(memory[i].name) &&
-                memory[i].value.equals(String.valueOf(processId)))
-            {
+            if (memory[i].type == CellType.PCB &&
+                    isPCBIdField(memory[i].name) &&
+                    memory[i].value.equals(String.valueOf(processId))) {
                 return true;
             }
         }
         return false;
     }
 
-    //#endregion
+    // #endregion
 
-    //#region Helper Methods
+    // #region Helper Methods
 
     private static int[] findProcessBounds(int processId) {
         int lowerBoundary = -1;
         int upperBoundary = -1;
 
         for (int i = 0; i < MEMORY_SIZE; i++) {
-            if (memory[i].type == CellType.PCB && 
-                isPCBIdField(memory[i].name) &&
-                memory[i].value.equals(String.valueOf(processId)))
-            {
+            if (memory[i].type == CellType.PCB &&
+                    isPCBIdField(memory[i].name) &&
+                    memory[i].value.equals(String.valueOf(processId))) {
                 lowerBoundary = memory[i + 3].value != null ? Integer.parseInt(memory[i + 3].value.split("-")[0]) : -1;
                 upperBoundary = memory[i + 3].value != null ? Integer.parseInt(memory[i + 3].value.split("-")[1]) : -1;
                 break;
             }
         }
 
-        return new int[]{lowerBoundary, upperBoundary};
+        return new int[] { lowerBoundary, upperBoundary };
     }
 
     private static int getAmountOfFreeSpace() {
@@ -483,12 +484,12 @@ public class Memory {
     private static void updateProcessBounds(int newStart) {
         String[] parts = memory[newStart + 3].value.split("-");
         int oldStart = Integer.parseInt(parts[0]);
-        int oldEnd   = Integer.parseInt(parts[1]);
+        int oldEnd = Integer.parseInt(parts[1]);
         int blockSize = oldEnd - oldStart + 1;
         memory[newStart + 3].value = newStart + "-" + (newStart + blockSize - 1);
     }
 
-    //#endregion
+    // #endregion
 }
 
 final class MemoryCell {
@@ -510,18 +511,18 @@ final class MemoryCell {
     public String toString() {
         // Write empty string instead of "null" so fromString can round-trip correctly
         return String.format("%s,%s,%s",
-            name  == null ? "" : name,
-            value == null ? "" : value,
-            type);
+                name == null ? "" : name,
+                value == null ? "" : value,
+                type);
     }
 
     public void fromString(String line) {
         // Limit to 3 parts so a comma inside a value doesn't break the split
         String[] parts = line.split(",", 3);
         if (parts.length == 3) {
-            this.name  = parts[0].isEmpty() ? null : parts[0];
+            this.name = parts[0].isEmpty() ? null : parts[0];
             this.value = parts[1].isEmpty() ? null : parts[1];
-            this.type  = CellType.valueOf(parts[2]);
+            this.type = CellType.valueOf(parts[2]);
         }
     }
 }
