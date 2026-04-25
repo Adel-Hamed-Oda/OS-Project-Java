@@ -41,7 +41,7 @@ public class Scheduler {
         stopSimulationRequested = false;
         disableStepMode();
 
-        ProcessController.initProcessController();;
+        ProcessController.initProcessController();
         Memory.initMemory();
         MutexManager.InitMutexes();
         Parser.initParser();

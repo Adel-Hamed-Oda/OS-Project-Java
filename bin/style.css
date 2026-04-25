@@ -1,0 +1,256 @@
+/* Color Palette */
+.root-pane {
+    -fx-background-color: linear-gradient(to bottom right, #1a1c1e, #2c3e50);
+    -fx-font-family: "Segoe UI", Helvetica, Arial, sans-serif;
+}
+
+.label {
+    -fx-text-fill: #adb5bd;
+    -fx-font-weight: bold;
+    -fx-font-size: 13px;
+}
+
+/* Header & Status */
+.status-header {
+    -fx-background-color: #212529;
+    -fx-padding: 15;
+    -fx-background-radius: 8;
+    -fx-border-color: #343a40;
+    -fx-border-width: 1;
+}
+
+.status-value {
+    -fx-text-fill: #4dabf7;
+    -fx-font-size: 16px;
+    -fx-font-family: "Consolas";
+}
+
+/* Cards */
+.card {
+    -fx-background-color: rgba(43, 48, 53, 0.7);
+    -fx-background-radius: 12;
+    -fx-padding: 12;
+    -fx-border-color: rgba(255, 255, 255, 0.1);
+    -fx-border-radius: 12;
+    -fx-border-width: 1;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.5), 15, 0, 0, 8);
+}
+
+.card-header {
+    -fx-text-fill: #dee2e6;
+    -fx-font-size: 11px;
+    -fx-opacity: 0.8;
+}
+
+.program-config-panel {
+    -fx-background-color: rgba(43, 48, 53, 0.7);
+    -fx-background-radius: 12;
+    -fx-border-color: rgba(255, 255, 255, 0.1);
+    -fx-border-radius: 12;
+    -fx-border-width: 1;
+}
+
+.scheduling-panel {
+    -fx-background-color: rgba(43, 48, 53, 0.7);
+    -fx-background-radius: 12;
+    -fx-border-color: rgba(255, 255, 255, 0.1);
+    -fx-border-radius: 12;
+    -fx-border-width: 1;
+}
+
+.program-config-row {
+    -fx-alignment: center-left;
+}
+
+.program-config-cell {
+    -fx-background-color: rgba(33, 37, 41, 0.55);
+    -fx-background-radius: 8;
+    -fx-border-color: rgba(255, 255, 255, 0.08);
+    -fx-border-radius: 8;
+    -fx-border-width: 1;
+}
+
+.program-config-header {
+    -fx-text-fill: #dee2e6;
+    -fx-font-size: 12px;
+}
+
+.program-config-row-title {
+    -fx-min-width: 140;
+    -fx-pref-width: 140;
+}
+
+.program-config-check {
+    -fx-text-fill: #e9ecef;
+}
+
+.program-arrival-field {
+    -fx-pref-width: 90;
+}
+
+/* Inputs & Lists */
+.list-view,
+.text-area {
+    -fx-background-color: #2b3035;
+    -fx-background-insets: 0;
+    -fx-text-fill: #e9ecef;
+    -fx-border-color: #495057;
+    -fx-border-radius: 4;
+}
+
+.list-cell {
+    -fx-background-color: transparent;
+    -fx-text-fill: #dee2e6;
+    -fx-padding: 5;
+}
+
+.list-cell:filled:selected {
+    -fx-background-color: #495057;
+}
+
+.memory-container {
+    -fx-padding: 15;
+    -fx-background-color: #2b3035;
+
+}
+
+.memory-table {
+    -fx-background-color: #2b3035;
+    -fx-background-insets: 0;
+    -fx-border-color: #495057;
+    -fx-border-radius: 4;
+}
+
+.memory-table .column-header-background {
+    -fx-background-color: #212529;
+}
+
+.memory-table .column-header,
+.memory-table .filler {
+    -fx-background-color: #212529;
+    -fx-border-color: #343a40;
+}
+
+.memory-table .column-header .label {
+    -fx-text-fill: #dee2e6;
+    -fx-font-size: 12px;
+}
+
+.memory-table .table-row-cell {
+    -fx-background-color: #2b3035;
+    -fx-table-cell-border-color: #343a40;
+}
+
+.memory-table .table-row-cell:selected {
+    -fx-background-color: #495057;
+}
+
+.memory-table .table-cell {
+    -fx-font-family: "Consolas";
+    -fx-font-size: 13px;
+    -fx-padding: 4 8;
+    -fx-text-fill: #e9ecef;
+    -fx-border-color: transparent #3d434b #3d434b transparent;
+    -fx-border-width: 0 1 1 0;
+}
+
+.memory-table .table-row-cell:selected .table-cell {
+    -fx-border-color: transparent #56606b #56606b transparent;
+}
+
+.memory-table .scroll-bar:vertical {
+    -fx-background-color: transparent;
+    -fx-width: 8;
+}
+
+.memory-table .scroll-bar:vertical .thumb {
+    -fx-background-color: #4b5263;
+    -fx-background-radius: 10;
+}
+
+.memory-text-area .content {
+    -fx-background-color: #1a1c1e;
+}
+
+
+/* Buttons */
+.button {
+    -fx-cursor: hand;
+    -fx-transition: 0.2s;
+}
+
+.button-start {
+    -fx-background-color: #2f9e44;
+    -fx-text-fill: white;
+}
+
+.button-start:hover {
+    -fx-background-color: #40c057;
+}
+
+.button-secondary {
+    -fx-background-color: #495057;
+    -fx-text-fill: white;
+}
+
+.button-end {
+    -fx-background-color: #c94f4f;
+    -fx-text-fill: white;
+}
+
+.button-end:hover {
+    -fx-background-color: #e06767;
+}
+
+.input-card {
+    -fx-background-color: #343a40;
+    -fx-border-color: #4dabf7;
+    -fx-border-width: 2 0 0 0;
+}
+
+.output-section {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+}
+
+.output-sections {
+    -fx-alignment: center-left;
+}
+
+.output-section-title {
+    -fx-text-fill: #dee2e6;
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-opacity: 0.85;
+}
+
+.output-text-area {
+    -fx-control-inner-background: #2b3035;
+    -fx-text-fill: #e9ecef;
+    -fx-font-family: "Consolas";
+    -fx-font-size: 12px;
+    -fx-border-color: #495057;
+    -fx-border-radius: 6;
+    -fx-background-radius: 6;
+    -fx-border-width: 5;
+    -fx-background-color: #ffffff;
+
+}
+
+/* Remove the default SplitPane borders for a cleaner look */
+.split-pane {
+    -fx-background-color: transparent;
+    -fx-padding: 0;
+}
+
+.split-pane-divider {
+    -fx-padding: 2 0 2 0;
+    -fx-background-color: #343a40;
+}
+
+.io-split-pane .split-pane-divider {
+    -fx-padding: 2 1 2 1;
+    -fx-background-color: #4b5263;
+    -fx-border-color: #4dabf7;
+    -fx-border-width: 0 1 0 1;
+}
