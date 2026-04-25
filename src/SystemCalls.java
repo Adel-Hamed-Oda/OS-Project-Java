@@ -41,6 +41,7 @@ public class SystemCalls {
     }
 
     public static void print(String data) {
+        Dashboard.appendProgramOutput(data);
         System.out.println(data);
     }
 
@@ -97,9 +98,15 @@ public class SystemCalls {
         int num1 = Integer.parseInt(value1);
         int num2 = Integer.parseInt(value2);
 
+        StringBuilder output = new StringBuilder();
         for (int i = num1; i <= num2; i++) {
-            System.out.print(i + " ");
+            if (output.length() > 0) {
+                output.append(' ');
+            }
+            output.append(i);
         }
-        System.out.println();
+
+        Dashboard.appendProgramOutput(output.toString());
+        System.out.println(output);
     }
 }
